@@ -1,4 +1,7 @@
 <?php
+/**
+ * Catalogue queries: products, categories, branches, and multi-branch stock.
+ */
 
 function product_search_sql(): string
 {
@@ -8,6 +11,7 @@ function product_search_sql(): string
             WHERE p.is_active = 1';
 }
 
+/** Search active products by name, SKU or description (prepared LIKE). */
 function find_products(mysqli $db, string $q = '', int $categoryId = 0): array
 {
     $sql = product_search_sql();
@@ -40,6 +44,10 @@ function find_product(mysqli $db, int $id): ?array
     );
 }
 
+/**
+ * Stock at every active branch for one medication.
+ * LEFT JOIN so branches with no row still show quantity 0 (Out of stock).
+ */
 function product_availability(mysqli $db, int $productId): array
 {
     return db_all(

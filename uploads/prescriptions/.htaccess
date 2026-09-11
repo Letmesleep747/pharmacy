@@ -1,0 +1,5 @@
+# Deny direct HTTP access to prescription files.
+Options -Indexes
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>

@@ -1,4 +1,8 @@
 <?php
+/**
+ * Admin report centre — HTML tables + CSV download (?format=csv).
+ * Report types: sales, bestsellers, inventory, lowstock, branch.
+ */
 require dirname(__DIR__) . '/includes/init.php';
 require_admin_portal();
 
@@ -18,9 +22,9 @@ if ($format === 'csv') {
     if ($type === 'sales') {
         $rows = [];
         foreach (sales_rows($db, $from, $to, $branchId) as $row) {
-            $rows[] = [$row['id'], $row['created_at'], $row['source'], $row['branch_name'], $row['customer_name'] ?: 'Walk-in', $row['discount_total'], $row['total']];
+            $rows[] = [$row['id'], $row['created_at'], $row['source'], $row['status'] ?? '', $row['branch_name'], $row['customer_name'] ?: 'Walk-in', $row['discount_total'], $row['total']];
         }
-        csv_download('sales-report.csv', ['Order', 'Created', 'Source', 'Branch', 'Customer', 'Discount', 'Total'], $rows);
+        csv_download('sales-report.csv', ['Order', 'Created', 'Source', 'Status', 'Branch', 'Customer', 'Discount', 'Total'], $rows);
     }
     if ($type === 'bestsellers') {
         $rows = [];
@@ -99,14 +103,15 @@ $query = http_build_query(['type' => $type, 'from' => $from, 'to' => $to, 'branc
         $rows = sales_rows($db, $from, $to, $branchId); ?>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Order</th><th>Date</th><th>Source</th><th>Branch</th><th>Customer</th><th>Discount</th><th>Total</th></tr></thead>
+          <thead><tr><th>Order</th><th>Date</th><th>Source</th><th>Status</th><th>Branch</th><th>Customer</th><th>Discount</th><th>Total</th></tr></thead>
           <tbody>
-            <?php if (!$rows): ?><tr><td colspan="7">No sales in this period.</td></tr><?php endif; ?>
+            <?php if (!$rows): ?><tr><td colspan="8">No sales in this period.</td></tr><?php endif; ?>
             <?php foreach ($rows as $row): ?>
               <tr>
-                <td><a href="<?= e(url('pages/order.php?id=' . (int) $row['id'])) ?>">#<?= (int) $row['id'] ?></a></td>
+                <td>#<?= (int) $row['id'] ?></td>
                 <td><?= e($row['created_at']) ?></td>
                 <td><?= e($row['source']) ?></td>
+                <td><?= e((string) ($row['status'] ?? '')) ?></td>
                 <td><?= e($row['branch_name']) ?></td>
                 <td><?= e($row['customer_name'] ?: 'Walk-in') ?></td>
                 <td><?= e(money((float) $row['discount_total'])) ?></td>

@@ -1,5 +1,9 @@
 <?php
+/**
+ * MySQLi helpers. All queries use prepared statements to avoid SQL injection.
+ */
 
+/** Singleton connection reused for the request lifetime. */
 function db(): mysqli
 {
     static $mysqli = null;
@@ -21,6 +25,7 @@ function db(): mysqli
     return $mysqli;
 }
 
+/** Bind parameters by reference (required by mysqli_stmt::bind_param). */
 function db_bind(mysqli_stmt $stmt, string $types, array $params): void
 {
     if ($types === '') {
@@ -33,6 +38,7 @@ function db_bind(mysqli_stmt $stmt, string $types, array $params): void
     $stmt->bind_param($types, ...$refs);
 }
 
+/** Run a SELECT and return one associative row, or null. */
 function db_one(mysqli $db, string $sql, string $types = '', array $params = []): ?array
 {
     $stmt = $db->prepare($sql);
@@ -44,6 +50,7 @@ function db_one(mysqli $db, string $sql, string $types = '', array $params = [])
     return $row ?: null;
 }
 
+/** Run a SELECT and return all rows as an array of associative arrays. */
 function db_all(mysqli $db, string $sql, string $types = '', array $params = []): array
 {
     $stmt = $db->prepare($sql);
@@ -55,6 +62,7 @@ function db_all(mysqli $db, string $sql, string $types = '', array $params = [])
     return $rows;
 }
 
+/** Run INSERT/UPDATE/DELETE; caller may read insert_id then close the statement. */
 function db_exec(mysqli $db, string $sql, string $types = '', array $params = []): mysqli_stmt
 {
     $stmt = $db->prepare($sql);

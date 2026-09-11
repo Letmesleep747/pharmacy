@@ -46,23 +46,23 @@ INSERT INTO categories (id, name) VALUES
 (7, 'Chronic care'),
 (8, 'First aid');
 
-INSERT INTO products (id, category_id, name, sku, description, unit_price, is_active) VALUES
-(1, 1, 'Paracetamol 500mg', 'PARA-500', 'Film-coated tablets for mild to moderate pain and fever. Pack of 20 tablets.', 8.90, 1),
-(2, 1, 'Ibuprofen 200mg', 'IBU-200', 'Non-steroidal anti-inflammatory tablets. Pack of 20.', 12.50, 1),
-(3, 2, 'Amoxicillin 250mg', 'AMOX-250', 'Capsule antibiotic. Dispense according to prescription guidance. Pack of 21.', 18.00, 1),
-(4, 3, 'Cetirizine 10mg', 'CET-10', 'Once-daily antihistamine for hay fever and urticaria. Pack of 10.', 15.90, 1),
-(5, 3, 'Loratadine 10mg', 'LOR-10', 'Non-drowsy antihistamine tablets. Pack of 10.', 14.50, 1),
-(6, 4, 'Omeprazole 20mg', 'OME-20', 'Proton-pump inhibitor capsules for acid reflux. Pack of 14.', 22.00, 1),
-(7, 5, 'Vitamin C 1000mg', 'VITC-1000', 'Effervescent vitamin C tablets. Tube of 20.', 19.90, 1),
-(8, 5, 'Vitamin D3 1000IU', 'VITD-1000', 'Softgel capsules supporting bone health. Bottle of 60.', 24.00, 1),
-(9, 6, 'Salbutamol Inhaler', 'SALB-INH', 'Reliever inhaler for bronchospasm. 200 metered doses.', 32.00, 1),
-(10, 6, 'Cough Syrup 100ml', 'COUGH-100', 'Soothing cough mixture for dry cough. 100 ml bottle.', 11.80, 1),
-(11, 1, 'Aspirin 100mg', 'ASP-100', 'Low-dose aspirin tablets. Pack of 28.', 9.50, 1),
-(12, 7, 'Metformin 500mg', 'MET-500', 'Oral antidiabetic tablets. Pack of 56.', 16.40, 1),
-(13, 7, 'Amlodipine 5mg', 'AML-5', 'Calcium-channel blocker tablets. Pack of 28.', 13.20, 1),
-(14, 8, 'Hydrocortisone Cream 1%', 'HC-1', 'Topical cream for mild inflammatory skin conditions. 15 g tube.', 10.90, 1),
-(15, 8, 'Oral Rehydration Salts', 'ORS-1', 'WHO-formula ORS sachets. Box of 10.', 7.50, 1),
-(16, 8, 'Antiseptic Liquid 50ml', 'ANT-50', 'Antiseptic solution for minor cuts and grazes.', 6.80, 1);
+INSERT INTO products (id, category_id, name, sku, description, unit_price, is_active, requires_prescription) VALUES
+(1, 1, 'Paracetamol 500mg', 'PARA-500', 'Film-coated tablets for mild to moderate pain and fever. Pack of 20 tablets.', 8.90, 1, 0),
+(2, 1, 'Ibuprofen 200mg', 'IBU-200', 'Non-steroidal anti-inflammatory tablets. Pack of 20.', 12.50, 1, 0),
+(3, 2, 'Amoxicillin 250mg', 'AMOX-250', 'Capsule antibiotic. Requires a valid prescription before dispensing. Pack of 21.', 18.00, 1, 1),
+(4, 3, 'Cetirizine 10mg', 'CET-10', 'Once-daily antihistamine for hay fever and urticaria. Pack of 10.', 15.90, 1, 0),
+(5, 3, 'Loratadine 10mg', 'LOR-10', 'Non-drowsy antihistamine tablets. Pack of 10.', 14.50, 1, 0),
+(6, 4, 'Omeprazole 20mg', 'OME-20', 'Proton-pump inhibitor capsules for acid reflux. Pack of 14.', 22.00, 1, 0),
+(7, 5, 'Vitamin C 1000mg', 'VITC-1000', 'Effervescent vitamin C tablets. Tube of 20.', 19.90, 1, 0),
+(8, 5, 'Vitamin D3 1000IU', 'VITD-1000', 'Softgel capsules supporting bone health. Bottle of 60.', 24.00, 1, 0),
+(9, 6, 'Salbutamol Inhaler', 'SALB-INH', 'Reliever inhaler for bronchospasm. Requires prescription. 200 metered doses.', 32.00, 1, 1),
+(10, 6, 'Cough Syrup 100ml', 'COUGH-100', 'Soothing cough mixture for dry cough. 100 ml bottle.', 11.80, 1, 0),
+(11, 1, 'Aspirin 100mg', 'ASP-100', 'Low-dose aspirin tablets. Pack of 28.', 9.50, 1, 0),
+(12, 7, 'Metformin 500mg', 'MET-500', 'Oral antidiabetic tablets. Requires prescription. Pack of 56.', 16.40, 1, 1),
+(13, 7, 'Amlodipine 5mg', 'AML-5', 'Calcium-channel blocker tablets. Requires prescription. Pack of 28.', 13.20, 1, 1),
+(14, 8, 'Hydrocortisone Cream 1%', 'HC-1', 'Topical cream for mild inflammatory skin conditions. 15 g tube.', 10.90, 1, 0),
+(15, 8, 'Oral Rehydration Salts', 'ORS-1', 'WHO-formula ORS sachets. Box of 10.', 7.50, 1, 0),
+(16, 8, 'Antiseptic Liquid 50ml', 'ANT-50', 'Antiseptic solution for minor cuts and grazes.', 6.80, 1, 0);
 
 -- Branch C has Paracetamol 500mg out of stock (qty 0) as in the assignment example
 INSERT INTO branch_stock (branch_id, product_id, quantity, reorder_level) VALUES
@@ -93,18 +93,18 @@ INSERT INTO promotion_products (promotion_id, product_id) VALUES
 (2, 7), (2, 8),
 (3, 9);
 
--- Historical sales so analytics charts are non-empty (prices match catalogue; discounts applied on promo lines)
-INSERT INTO orders (id, user_id, branch_id, source, subtotal, discount_total, total, created_at) VALUES
-(1, 3, 1, 'online', 17.80, 2.67, 15.13, '2026-08-10 10:15:00'),
-(2, NULL, 1, 'instore', 32.00, 0.00, 32.00, '2026-08-12 16:40:00'),
-(3, 3, 2, 'online', 39.80, 5.00, 34.80, '2026-08-18 09:05:00'),
-(4, NULL, 2, 'instore', 25.00, 1.88, 23.12, '2026-08-22 14:20:00'),
-(5, 3, 1, 'online', 48.00, 0.00, 48.00, '2026-08-28 11:30:00'),
-(6, NULL, 3, 'instore', 35.40, 1.34, 34.06, '2026-09-01 13:10:00'),
-(7, 3, 1, 'online', 26.80, 0.00, 26.80, '2026-09-02 18:45:00'),
-(8, NULL, 2, 'instore', 64.00, 0.00, 64.00, '2026-09-03 10:00:00'),
-(9, 3, 3, 'online', 22.50, 0.00, 22.50, '2026-09-03 19:20:00'),
-(10, NULL, 1, 'instore', 53.40, 4.01, 49.39, '2026-09-04 09:50:00');
+-- Historical sales so analytics charts are non-empty (all completed — stock already reflected)
+INSERT INTO orders (id, user_id, branch_id, source, subtotal, discount_total, total, status, created_at) VALUES
+(1, 3, 1, 'online', 17.80, 2.67, 15.13, 'completed', '2026-08-10 10:15:00'),
+(2, NULL, 1, 'instore', 32.00, 0.00, 32.00, 'completed', '2026-08-12 16:40:00'),
+(3, 3, 2, 'online', 39.80, 5.00, 34.80, 'completed', '2026-08-18 09:05:00'),
+(4, NULL, 2, 'instore', 25.00, 1.88, 23.12, 'completed', '2026-08-22 14:20:00'),
+(5, 3, 1, 'online', 48.00, 0.00, 48.00, 'completed', '2026-08-28 11:30:00'),
+(6, NULL, 3, 'instore', 35.40, 1.34, 34.06, 'completed', '2026-09-01 13:10:00'),
+(7, 3, 1, 'online', 26.80, 0.00, 26.80, 'completed', '2026-09-02 18:45:00'),
+(8, NULL, 2, 'instore', 64.00, 0.00, 64.00, 'completed', '2026-09-03 10:00:00'),
+(9, 3, 3, 'online', 22.50, 0.00, 22.50, 'completed', '2026-09-03 19:20:00'),
+(10, NULL, 1, 'instore', 53.40, 4.01, 49.39, 'completed', '2026-09-04 09:50:00');
 
 INSERT INTO order_items (order_id, product_id, quantity, unit_price, discount_amount, line_total) VALUES
 (1, 1, 2, 8.90, 2.67, 15.13),

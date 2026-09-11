@@ -1,3 +1,7 @@
+# Apache rules for OverDose Pharmacy (needs mod_rewrite enabled).
+# - Hide sensitive folders from direct browser access
+# - Map clean API URLs onto the PHP endpoints
+
 Options -Indexes
 
 <IfModule mod_authz_core.c>
@@ -8,7 +12,9 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # Block HTTP access to config, includes and SQL scripts
   RewriteRule ^(config|includes|sql)(/|$) - [F]
+  # REST-style routes used for the JSON API demos
   RewriteRule ^api/products/([0-9]+)/availability/?$ api/availability.php?product_id=$1 [L,QSA]
   RewriteRule ^api/products/?$ api/products.php [L,QSA]
 </IfModule>

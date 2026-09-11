@@ -1,5 +1,10 @@
 <?php
+/**
+ * Analytics queries used by the admin dashboard and CSV report downloads.
+ * All figures come from orders, order_items and branch_stock — not hardcoded.
+ */
 
+/** Default date range for charts/reports (last 60 days), with simple validation. */
 function report_dates(): array
 {
     $from = $_GET['from'] ?? date('Y-m-d', strtotime('-60 days'));
@@ -15,8 +20,10 @@ function report_dates(): array
 
 function sales_summary(mysqli $db, string $from, string $to, int $branchId = 0): array
 {
+    // Exclude pending/rejected Rx orders from revenue until approved
     $sql = 'SELECT COUNT(*) AS transactions, COALESCE(SUM(total),0) AS revenue, COALESCE(SUM(discount_total),0) AS discounts
-            FROM orders WHERE DATE(created_at) BETWEEN ? AND ?';
+            FROM orders WHERE DATE(created_at) BETWEEN ? AND ?
+              AND status IN (\'completed\', \'approved\')';
     $types = 'ss';
     $params = [$from, $to];
     if ($branchId > 0) {
@@ -31,6 +38,7 @@ function sales_by_day(mysqli $db, string $from, string $to, int $branchId = 0): 
 {
     $sql = 'SELECT DATE(created_at) AS d, SUM(total) AS revenue, COUNT(*) AS n
             FROM orders WHERE DATE(created_at) BETWEEN ? AND ?
+              AND status IN (\'completed\', \'approved\')
             ' . ($branchId > 0 ? ' AND branch_id = ?' : '') . '
             GROUP BY DATE(created_at) ORDER BY d';
     $types = $branchId > 0 ? 'ssi' : 'ss';
@@ -44,7 +52,9 @@ function sales_by_branch(mysqli $db, string $from, string $to): array
         $db,
         'SELECT b.id, b.name, COUNT(o.id) AS transactions, COALESCE(SUM(o.total),0) AS revenue
          FROM branches b
-         LEFT JOIN orders o ON o.branch_id = b.id AND DATE(o.created_at) BETWEEN ? AND ?
+         LEFT JOIN orders o ON o.branch_id = b.id
+           AND DATE(o.created_at) BETWEEN ? AND ?
+           AND o.status IN (\'completed\', \'approved\')
          GROUP BY b.id, b.name
          ORDER BY revenue DESC',
         'ss',
@@ -60,7 +70,8 @@ function best_sellers(mysqli $db, string $from, string $to, int $branchId = 0, i
             FROM order_items oi
             INNER JOIN orders o ON o.id = oi.order_id
             INNER JOIN products p ON p.id = oi.product_id
-            WHERE DATE(o.created_at) BETWEEN ? AND ?';
+            WHERE DATE(o.created_at) BETWEEN ? AND ?
+              AND o.status IN (\'completed\', \'approved\')';
     $types = 'ss';
     $params = [$from, $to];
     if ($branchId > 0) {
@@ -74,7 +85,7 @@ function best_sellers(mysqli $db, string $from, string $to, int $branchId = 0, i
 
 function sales_rows(mysqli $db, string $from, string $to, int $branchId = 0): array
 {
-    $sql = 'SELECT o.id, o.created_at, o.source, o.total, o.discount_total, b.name AS branch_name, u.name AS customer_name
+    $sql = 'SELECT o.id, o.created_at, o.source, o.status, o.total, o.discount_total, b.name AS branch_name, u.name AS customer_name
             FROM orders o
             INNER JOIN branches b ON b.id = o.branch_id
             LEFT JOIN users u ON u.id = o.user_id

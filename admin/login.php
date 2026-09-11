@@ -1,4 +1,7 @@
 <?php
+/**
+ * Administrator sign-in — only accounts with role = admin.
+ */
 require dirname(__DIR__) . '/includes/init.php';
 redirect_signed_in_user();
 

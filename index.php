@@ -1,4 +1,8 @@
 <?php
+/**
+ * Customer storefront home page.
+ * Loads featured medications, active promotions and branches from MySQL.
+ */
 require __DIR__ . '/includes/init.php';
 require_storefront();
 

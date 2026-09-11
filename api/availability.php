@@ -1,4 +1,9 @@
 <?php
+/**
+ * JSON API: multi-branch availability for one product.
+ * Example (GET): /pharmacy/api/products/1/availability
+ * Returns Available / Out of stock per branch from branch_stock.
+ */
 require dirname(__DIR__) . '/includes/init.php';
 
 header('Content-Type: application/json; charset=utf-8');

@@ -1,4 +1,8 @@
 <?php
+/**
+ * Admin analytics dashboard.
+ * Charts and cards are filled from real orders / stock queries (see includes/reports.php).
+ */
 require dirname(__DIR__) . '/includes/init.php';
 require_admin_portal();
 

@@ -1,10 +1,15 @@
 <?php
+/**
+ * Shared view helpers: escaping, URLs, flash messages, and input filters.
+ */
 
+/** Escape output for HTML to prevent XSS. */
 function e(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/** Project URL prefix (e.g. /pharmacy) so links work under XAMPP htdocs. */
 function app_base(): string
 {
     static $base = null;
@@ -29,6 +34,7 @@ function app_base(): string
     return $base;
 }
 
+/** Build an absolute path under the project base (e.g. url('pages/login.php')). */
 function url(string $path = ''): string
 {
     $path = ltrim($path, '/');
@@ -45,6 +51,7 @@ function redirect(string $path): void
     exit;
 }
 
+/** One-time message shown after redirect (success / error / info). */
 function flash_set(string $type, string $message): void
 {
     $_SESSION['flash'] = ['type' => $type, 'message' => $message];
