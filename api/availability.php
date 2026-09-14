@@ -24,13 +24,15 @@ if (!$product) {
 
 $branches = [];
 foreach (product_availability(db(), $id) as $row) {
-    $qty = (int) $row['quantity'];
+    $qty = (int) ($row['available'] ?? $row['quantity']);
     $branches[] = [
         'branch_id' => (int) $row['id'],
         'name' => $row['name'],
         'address' => $row['address'],
         'phone' => $row['phone'],
         'quantity' => $qty,
+        'on_hand' => (int) $row['quantity'],
+        'reserved' => (int) ($row['reserved_qty'] ?? 0),
         'status' => $qty > 0 ? 'Available' : 'Out of stock',
     ];
 }

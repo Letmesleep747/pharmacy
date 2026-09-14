@@ -79,6 +79,8 @@ CREATE TABLE branch_stock (
   branch_id INT UNSIGNED NOT NULL,
   product_id INT UNSIGNED NOT NULL,
   quantity INT UNSIGNED NOT NULL DEFAULT 0,
+  -- Held for uncollected pickup orders. Available to customers = quantity - reserved_qty.
+  reserved_qty INT UNSIGNED NOT NULL DEFAULT 0,
   reorder_level INT UNSIGNED NOT NULL DEFAULT 10,
   PRIMARY KEY (branch_id, product_id),
   KEY idx_stock_quantity (quantity),
@@ -125,8 +127,9 @@ CREATE TABLE orders (
   subtotal DECIMAL(10,2) NOT NULL,
   discount_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   total DECIMAL(10,2) NOT NULL,
-  -- pending_approval = waiting for staff Rx check; completed = stock taken / ready
-  status ENUM('pending_approval', 'approved', 'rejected', 'completed') NOT NULL DEFAULT 'completed',
+  -- pending_approval → ready_for_pickup (after Rx) → completed at collection, or expired
+  status ENUM('pending_approval', 'approved', 'rejected', 'ready_for_pickup', 'completed', 'expired') NOT NULL DEFAULT 'completed',
+  pickup_by DATETIME NULL,
   prescription_path VARCHAR(255) NULL,
   reviewed_by INT UNSIGNED NULL,
   reviewed_at DATETIME NULL,

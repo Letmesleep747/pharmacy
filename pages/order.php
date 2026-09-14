@@ -44,10 +44,8 @@ require dirname(__DIR__) . '/includes/header.php';
   <div class="container">
     <h1>Order #<?= (int) $order['id'] ?></h1>
     <p>
-      <?php if ($status === 'pending_approval'): ?>
+      <?php if ($status === 'pending_approval' || $status === 'expired'): ?>
         <span class="badge badge-warn"><?= e(order_status_label($status)) ?></span>
-      <?php elseif ($status === 'approved'): ?>
-        <span class="badge badge-ok"><?= e(order_status_label($status)) ?></span>
       <?php elseif ($status === 'rejected'): ?>
         <span class="badge badge-danger"><?= e(order_status_label($status)) ?></span>
       <?php else: ?>
@@ -56,11 +54,18 @@ require dirname(__DIR__) . '/includes/header.php';
     </p>
     <p>Pickup at <strong><?= e($order['branch_name']) ?></strong> — <?= e($order['address']) ?></p>
     <p class="muted"><?= e($order['source']) ?> · <?= e($order['created_at']) ?> · Total <?= e(money((float) $order['total'])) ?></p>
+    <?php if (!empty($order['pickup_by']) && in_array($status, ['pending_approval', 'ready_for_pickup', 'approved'], true)): ?>
+      <p class="muted">Collect by <strong><?= e($order['pickup_by']) ?></strong> or the reservation expires and stock is released.</p>
+    <?php endif; ?>
     <?php if ($status === 'rejected' && !empty($order['review_note'])): ?>
       <p class="flash flash-error">Reason: <?= e($order['review_note']) ?></p>
     <?php endif; ?>
     <?php if ($status === 'pending_approval'): ?>
-      <p class="muted">Your prescription is with the pharmacy team. You will be able to collect after approval.</p>
+      <p class="muted">Your prescription is with the pharmacy team. Stock is already reserved at this branch.</p>
+    <?php elseif ($status === 'ready_for_pickup' || $status === 'approved'): ?>
+      <p class="muted">Your order is ready. Bring your reference number when you collect.</p>
+    <?php elseif ($status === 'expired'): ?>
+      <p class="flash flash-error">This order expired because it was not collected in time. Reserved stock has been released.</p>
     <?php endif; ?>
     <div class="table-wrap">
       <table>

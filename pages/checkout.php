@@ -1,7 +1,8 @@
 <?php
 /**
- * Customer checkout. OTC orders complete immediately.
- * Carts with Rx items require a prescription upload and stay pending until staff approve.
+ * Customer checkout.
+ * Online orders reserve available stock (quantity − reserved_qty) for 48 hours.
+ * Rx carts also require a prescription upload and stay pending until staff approve.
  */
 require dirname(__DIR__) . '/includes/init.php';
 require_storefront();
@@ -30,13 +31,11 @@ if (is_post()) {
     } else {
         try {
             $prescriptionPath = null;
-            $status = 'completed';
-            $deduct = true;
+            $status = 'ready_for_pickup';
 
             if ($needsRx) {
                 $prescriptionPath = save_prescription_upload($_FILES['prescription'] ?? []);
                 $status = 'pending_approval';
-                $deduct = false;
             }
 
             $orderId = complete_sale(
@@ -45,15 +44,15 @@ if (is_post()) {
                 $branchId,
                 'online',
                 (int) current_user()['id'],
-                $deduct,
+                false,
                 $status,
                 $prescriptionPath
             );
             cart_clear();
             if ($status === 'pending_approval') {
-                flash_set('success', 'Order #' . $orderId . ' submitted. A pharmacist will review your prescription before pickup.');
+                flash_set('success', 'Order #' . $orderId . ' submitted. Stock is reserved while a pharmacist reviews your prescription.');
             } else {
-                flash_set('success', 'Order #' . $orderId . ' placed. Collect it from your chosen branch.');
+                flash_set('success', 'Order #' . $orderId . ' placed. Stock is reserved for 48 hours — collect before the pickup deadline.');
             }
             redirect('pages/order.php?id=' . $orderId);
         } catch (Throwable $e) {
@@ -68,7 +67,7 @@ require dirname(__DIR__) . '/includes/header.php';
 <section class="section">
   <div class="container">
     <h1>Pickup checkout</h1>
-    <p class="muted">Choose the branch you will collect from. Stock is reserved only at that branch. No online card payment — pay in store on collection.</p>
+    <p class="muted">Choose the branch you will collect from. Available stock at that branch is reserved for 48 hours. Pay in store on collection.</p>
     <?php if ($needsRx): ?>
       <p class="flash flash-info">Your cart includes prescription medication. Upload a doctor’s prescription (PDF/JPG/PNG). Staff must approve before you can collect.</p>
     <?php endif; ?>

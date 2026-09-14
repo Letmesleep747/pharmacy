@@ -36,16 +36,16 @@ if ($format === 'csv') {
     if ($type === 'inventory') {
         $rows = [];
         foreach (inventory_rows($db, $branchId) as $row) {
-            $rows[] = [$row['branch_name'], $row['sku'], $row['product_name'], $row['quantity'], $row['reorder_level']];
+            $rows[] = [$row['branch_name'], $row['sku'], $row['product_name'], $row['quantity'], $row['reserved_qty'] ?? 0, $row['available'] ?? 0, $row['reorder_level']];
         }
-        csv_download('inventory-report.csv', ['Branch', 'SKU', 'Product', 'Quantity', 'Reorder level'], $rows);
+        csv_download('inventory-report.csv', ['Branch', 'SKU', 'Product', 'On hand', 'Reserved', 'Available', 'Reorder level'], $rows);
     }
     if ($type === 'lowstock') {
         $rows = [];
         foreach (low_stock_rows($db, $branchId) as $row) {
-            $rows[] = [$row['branch_name'], $row['sku'], $row['product_name'], $row['quantity'], $row['reorder_level']];
+            $rows[] = [$row['branch_name'], $row['sku'], $row['product_name'], $row['available'] ?? $row['quantity'], $row['reserved_qty'] ?? 0, $row['reorder_level']];
         }
-        csv_download('low-stock-report.csv', ['Branch', 'SKU', 'Product', 'Quantity', 'Reorder level'], $rows);
+        csv_download('low-stock-report.csv', ['Branch', 'SKU', 'Product', 'Available', 'Reserved', 'Reorder level'], $rows);
     }
     if ($type === 'branch') {
         $rows = [];
@@ -143,7 +143,7 @@ $query = http_build_query(['type' => $type, 'from' => $from, 'to' => $to, 'branc
         $rows = inventory_rows($db, $branchId); ?>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Branch</th><th>SKU</th><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
+          <thead><tr><th>Branch</th><th>SKU</th><th>Product</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder</th></tr></thead>
           <tbody>
             <?php foreach ($rows as $row): ?>
               <tr>
@@ -151,6 +151,8 @@ $query = http_build_query(['type' => $type, 'from' => $from, 'to' => $to, 'branc
                 <td><?= e($row['sku']) ?></td>
                 <td><?= e($row['product_name']) ?></td>
                 <td><?= (int) $row['quantity'] ?></td>
+                <td><?= (int) ($row['reserved_qty'] ?? 0) ?></td>
+                <td><?= (int) ($row['available'] ?? 0) ?></td>
                 <td><?= (int) $row['reorder_level'] ?></td>
               </tr>
             <?php endforeach; ?>
@@ -161,15 +163,16 @@ $query = http_build_query(['type' => $type, 'from' => $from, 'to' => $to, 'branc
         $rows = low_stock_rows($db, $branchId); ?>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Branch</th><th>SKU</th><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
+          <thead><tr><th>Branch</th><th>SKU</th><th>Product</th><th>Available</th><th>Reserved</th><th>Reorder</th></tr></thead>
           <tbody>
-            <?php if (!$rows): ?><tr><td colspan="5">No low-stock lines.</td></tr><?php endif; ?>
+            <?php if (!$rows): ?><tr><td colspan="6">No low-stock lines.</td></tr><?php endif; ?>
             <?php foreach ($rows as $row): ?>
               <tr>
                 <td><?= e($row['branch_name']) ?></td>
                 <td><?= e($row['sku']) ?></td>
                 <td><?= e($row['product_name']) ?></td>
-                <td><?= (int) $row['quantity'] ?></td>
+                <td><?= (int) ($row['available'] ?? $row['quantity']) ?></td>
+                <td><?= (int) ($row['reserved_qty'] ?? 0) ?></td>
                 <td><?= (int) $row['reorder_level'] ?></td>
               </tr>
             <?php endforeach; ?>

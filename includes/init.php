@@ -30,3 +30,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 csrf_verify();
+
+try {
+    expire_overdue_orders(db());
+} catch (Throwable $e) {
+    // Schema may not include pickup_by / reserved_qty until migrate_reservation.sql is run.
+}

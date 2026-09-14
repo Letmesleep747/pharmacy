@@ -66,8 +66,8 @@ require dirname(__DIR__) . '/includes/header.php';
       <p class="muted">Use this list instead of calling each branch individually.</p>
       <ul class="availability">
         <?php foreach ($availability as $row):
-            $qty = (int) $row['quantity'];
-            $inStock = $qty > 0;
+            $available = (int) ($row['available'] ?? $row['quantity']);
+            $inStock = $available > 0;
             ?>
           <li>
             <div>
@@ -78,7 +78,7 @@ require dirname(__DIR__) . '/includes/header.php';
             <div>
               <?php if ($inStock): ?>
                 <span class="badge badge-ok">Available</span>
-                <div class="muted"><?= $qty ?> in stock</div>
+                <div class="muted"><?= $available ?> available</div>
               <?php else: ?>
                 <span class="badge badge-danger">Out of stock</span>
               <?php endif; ?>

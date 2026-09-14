@@ -46,14 +46,16 @@ function find_product(mysqli $db, int $id): ?array
 
 /**
  * Stock at every active branch for one medication.
- * LEFT JOIN so branches with no row still show quantity 0 (Out of stock).
+ * Available = on-hand quantity minus reserved (held) pickup orders.
  */
 function product_availability(mysqli $db, int $productId): array
 {
     return db_all(
         $db,
         'SELECT b.id, b.name, b.address, b.phone, b.opening_hours,
-                COALESCE(s.quantity, 0) AS quantity
+                COALESCE(s.quantity, 0) AS quantity,
+                COALESCE(s.reserved_qty, 0) AS reserved_qty,
+                GREATEST(0, CAST(COALESCE(s.quantity, 0) AS SIGNED) - CAST(COALESCE(s.reserved_qty, 0) AS SIGNED)) AS available
          FROM branches b
          LEFT JOIN branch_stock s ON s.branch_id = b.id AND s.product_id = ?
          WHERE b.is_active = 1

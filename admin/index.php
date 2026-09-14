@@ -72,13 +72,13 @@ require dirname(__DIR__) . '/includes/header.php';
         <?php else: ?>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Branch</th><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
+              <thead><tr><th>Branch</th><th>Product</th><th>Available</th><th>Reorder</th></tr></thead>
               <tbody>
                 <?php foreach (array_slice($low, 0, 12) as $row): ?>
                   <tr>
                     <td><?= e($row['branch_name']) ?></td>
                     <td><?= e($row['product_name']) ?></td>
-                    <td><?= (int) $row['quantity'] ?></td>
+                    <td><?= (int) ($row['available'] ?? $row['quantity']) ?></td>
                     <td><?= (int) $row['reorder_level'] ?></td>
                   </tr>
                 <?php endforeach; ?>

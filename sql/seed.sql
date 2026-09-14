@@ -94,17 +94,17 @@ INSERT INTO promotion_products (promotion_id, product_id) VALUES
 (3, 9);
 
 -- Historical sales so analytics charts are non-empty (all completed — stock already reflected)
-INSERT INTO orders (id, user_id, branch_id, source, subtotal, discount_total, total, status, created_at) VALUES
-(1, 3, 1, 'online', 17.80, 2.67, 15.13, 'completed', '2026-08-10 10:15:00'),
-(2, NULL, 1, 'instore', 32.00, 0.00, 32.00, 'completed', '2026-08-12 16:40:00'),
-(3, 3, 2, 'online', 39.80, 5.00, 34.80, 'completed', '2026-08-18 09:05:00'),
-(4, NULL, 2, 'instore', 25.00, 1.88, 23.12, 'completed', '2026-08-22 14:20:00'),
-(5, 3, 1, 'online', 48.00, 0.00, 48.00, 'completed', '2026-08-28 11:30:00'),
-(6, NULL, 3, 'instore', 35.40, 1.34, 34.06, 'completed', '2026-09-01 13:10:00'),
-(7, 3, 1, 'online', 26.80, 0.00, 26.80, 'completed', '2026-09-02 18:45:00'),
-(8, NULL, 2, 'instore', 64.00, 0.00, 64.00, 'completed', '2026-09-03 10:00:00'),
-(9, 3, 3, 'online', 22.50, 0.00, 22.50, 'completed', '2026-09-03 19:20:00'),
-(10, NULL, 1, 'instore', 53.40, 4.01, 49.39, 'completed', '2026-09-04 09:50:00');
+INSERT INTO orders (id, user_id, branch_id, source, subtotal, discount_total, total, status, pickup_by, created_at) VALUES
+(1, 3, 1, 'online', 17.80, 2.67, 15.13, 'completed', '2026-08-12 10:15:00', '2026-08-10 10:15:00'),
+(2, NULL, 1, 'instore', 32.00, 0.00, 32.00, 'completed', NULL, '2026-08-12 16:40:00'),
+(3, 3, 2, 'online', 39.80, 5.00, 34.80, 'completed', '2026-08-20 09:05:00', '2026-08-18 09:05:00'),
+(4, NULL, 2, 'instore', 25.00, 1.88, 23.12, 'completed', NULL, '2026-08-22 14:20:00'),
+(5, 3, 1, 'online', 48.00, 0.00, 48.00, 'completed', '2026-08-30 11:30:00', '2026-08-28 11:30:00'),
+(6, NULL, 3, 'instore', 35.40, 1.34, 34.06, 'completed', NULL, '2026-09-01 13:10:00'),
+(7, 3, 1, 'online', 26.80, 0.00, 26.80, 'completed', '2026-09-04 18:45:00', '2026-09-02 18:45:00'),
+(8, NULL, 2, 'instore', 64.00, 0.00, 64.00, 'completed', NULL, '2026-09-03 10:00:00'),
+(9, 3, 3, 'online', 22.50, 0.00, 22.50, 'completed', '2026-09-05 19:20:00', '2026-09-03 19:20:00'),
+(10, NULL, 1, 'instore', 53.40, 4.01, 49.39, 'completed', NULL, '2026-09-04 09:50:00');
 
 INSERT INTO order_items (order_id, product_id, quantity, unit_price, discount_amount, line_total) VALUES
 (1, 1, 2, 8.90, 2.67, 15.13),

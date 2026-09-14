@@ -79,10 +79,12 @@ foreach ($pos['lines'] as $productId => $qty) {
     $pricing = apply_sale_pricing($db, (int) $productId, $unit, (int) $qty);
     $stock = db_one(
         $db,
-        'SELECT quantity FROM branch_stock WHERE branch_id = ? AND product_id = ?',
+        'SELECT quantity, reserved_qty FROM branch_stock WHERE branch_id = ? AND product_id = ?',
         'ii',
         [(int) $pos['branch_id'], (int) $productId]
     );
+    $onHand = (int) ($stock['quantity'] ?? 0);
+    $reserved = (int) ($stock['reserved_qty'] ?? 0);
     $subtotal += $unit * (int) $qty;
     $discountTotal += $pricing['discount'];
     $lines[] = [
@@ -91,7 +93,7 @@ foreach ($pos['lines'] as $productId => $qty) {
         'unit' => $unit,
         'discount' => $pricing['discount'],
         'line_total' => $pricing['line_total'],
-        'stock' => (int) ($stock['quantity'] ?? 0),
+        'stock' => max(0, $onHand - $reserved),
         'promo' => $pricing['promotion'],
     ];
 }

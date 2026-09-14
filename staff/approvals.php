@@ -26,7 +26,7 @@ require dirname(__DIR__) . '/includes/header.php';
   <?php require dirname(__DIR__) . '/includes/' . (is_admin() ? 'admin_nav' : 'staff_nav') . '.php'; ?>
   <div>
     <h1>Prescription approvals</h1>
-    <p class="muted">Review uploaded prescriptions. Approving deducts branch stock and marks the order ready for pickup.</p>
+    <p class="muted">Review uploaded prescriptions. Approving keeps the reservation and marks the order ready for pickup. Rejecting releases reserved stock.</p>
     <?php if (!$pending): ?>
       <p class="empty">No orders waiting for approval.</p>
     <?php else: ?>

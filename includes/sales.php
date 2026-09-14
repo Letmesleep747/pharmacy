@@ -1,8 +1,9 @@
 <?php
 /**
  * Online cart (session) and in-store POS state, plus transactional checkout.
- * OTC sales decrement stock immediately (status=completed).
- * Prescription online orders stay pending_approval until staff approve.
+ * Online pickup: increases reserved_qty (quantity unchanged until collection).
+ * In-store POS: deducts quantity immediately.
+ * Prescription online orders stay pending_approval until staff approve (reservation already held).
  */
 
 /** Customer shopping cart: [product_id => quantity] stored in the session. */
@@ -139,9 +140,11 @@ function pos_clear(): void
 /**
  * Complete an online or in-store sale in one DB transaction.
  *
+ * Online: increases reserved_qty and sets pickup_by (quantity unchanged until collection).
+ * In-store POS: deducts quantity immediately (walk-in, no reservation).
+ *
  * @param array $lines Map of product_id => quantity
  * @param string $source 'online' or 'instore'
- * @param bool $deductStock False for pending Rx orders (stock taken on approval)
  * @param string $status Order status value
  * @param string|null $prescriptionPath Relative upload path when Rx is required
  * @return int New orders.id
@@ -160,10 +163,13 @@ function complete_sale(
         throw new RuntimeException('The sale has no items.');
     }
 
-    $allowedStatus = ['pending_approval', 'approved', 'rejected', 'completed'];
+    $allowedStatus = ['pending_approval', 'approved', 'rejected', 'ready_for_pickup', 'completed', 'expired'];
     if (!in_array($status, $allowedStatus, true)) {
         $status = 'completed';
     }
+
+    $isOnline = $source === 'online';
+    $pickupBy = $isOnline ? date('Y-m-d H:i:s', time() + pickup_window_seconds()) : null;
 
     $db->begin_transaction();
     try {
@@ -190,24 +196,43 @@ function complete_sale(
 
             $stock = db_one(
                 $db,
-                'SELECT quantity FROM branch_stock WHERE branch_id = ? AND product_id = ? FOR UPDATE',
+                'SELECT quantity, reserved_qty FROM branch_stock WHERE branch_id = ? AND product_id = ? FOR UPDATE',
                 'ii',
                 [$branchId, $productId]
             );
-            $available = (int) ($stock['quantity'] ?? 0);
+            $onHand = (int) ($stock['quantity'] ?? 0);
+            $reserved = (int) ($stock['reserved_qty'] ?? 0);
+            $available = max(0, $onHand - $reserved);
             if ($available < $qty) {
                 throw new RuntimeException($product['name'] . ' does not have enough stock at this branch.');
             }
 
-            if ($deductStock) {
+            if ($isOnline) {
                 $stmt = db_exec(
                     $db,
-                    'UPDATE branch_stock SET quantity = quantity - ? WHERE branch_id = ? AND product_id = ? AND quantity >= ?',
+                    'UPDATE branch_stock
+                     SET reserved_qty = reserved_qty + ?
+                     WHERE branch_id = ? AND product_id = ?
+                       AND quantity >= reserved_qty + ?',
                     'iiii',
                     [$qty, $branchId, $productId, $qty]
                 );
                 if ($stmt->affected_rows !== 1) {
                     throw new RuntimeException('Could not reserve stock for ' . $product['name'] . '.');
+                }
+                $stmt->close();
+            } elseif ($deductStock) {
+                $stmt = db_exec(
+                    $db,
+                    'UPDATE branch_stock
+                     SET quantity = quantity - ?
+                     WHERE branch_id = ? AND product_id = ?
+                       AND quantity - reserved_qty >= ?',
+                    'iiii',
+                    [$qty, $branchId, $productId, $qty]
+                );
+                if ($stmt->affected_rows !== 1) {
+                    throw new RuntimeException('Could not deduct stock for ' . $product['name'] . '.');
                 }
                 $stmt->close();
             }
@@ -236,18 +261,18 @@ function complete_sale(
         if ($userId === null) {
             $stmt = db_exec(
                 $db,
-                'INSERT INTO orders (user_id, branch_id, source, subtotal, discount_total, total, status, prescription_path)
-                 VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)',
-                'isdddss',
-                [$branchId, $source, $subtotal, $discountTotal, $total, $status, $prescriptionPath]
+                'INSERT INTO orders (user_id, branch_id, source, subtotal, discount_total, total, status, pickup_by, prescription_path)
+                 VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'isdddsss',
+                [$branchId, $source, $subtotal, $discountTotal, $total, $status, $pickupBy, $prescriptionPath]
             );
         } else {
             $stmt = db_exec(
                 $db,
-                'INSERT INTO orders (user_id, branch_id, source, subtotal, discount_total, total, status, prescription_path)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                'iisdddss',
-                [$userId, $branchId, $source, $subtotal, $discountTotal, $total, $status, $prescriptionPath]
+                'INSERT INTO orders (user_id, branch_id, source, subtotal, discount_total, total, status, pickup_by, prescription_path)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'iisdddsss',
+                [$userId, $branchId, $source, $subtotal, $discountTotal, $total, $status, $pickupBy, $prescriptionPath]
             );
         }
         $orderId = (int) $stmt->insert_id;
@@ -279,8 +304,68 @@ function complete_sale(
     }
 }
 
+function pickup_window_seconds(): int
+{
+    return 48 * 3600;
+}
+
+function release_order_reservation(mysqli $db, array $order): void
+{
+    $items = db_all(
+        $db,
+        'SELECT product_id, quantity FROM order_items WHERE order_id = ?',
+        'i',
+        [(int) $order['id']]
+    );
+    foreach ($items as $item) {
+        db_exec(
+            $db,
+            'UPDATE branch_stock
+             SET reserved_qty = GREATEST(0, CAST(reserved_qty AS SIGNED) - ?)
+             WHERE branch_id = ? AND product_id = ?',
+            'iii',
+            [(int) $item['quantity'], (int) $order['branch_id'], (int) $item['product_id']]
+        )->close();
+    }
+}
+
+/** Expire overdue pickup/Rx holds and return reserved stock to available. */
+function expire_overdue_orders(mysqli $db): void
+{
+    $due = db_all(
+        $db,
+        'SELECT id, branch_id, status FROM orders
+         WHERE pickup_by IS NOT NULL
+           AND pickup_by < NOW()
+           AND status IN (\'pending_approval\', \'approved\', \'ready_for_pickup\')'
+    );
+    foreach ($due as $order) {
+        $db->begin_transaction();
+        try {
+            $locked = db_one($db, 'SELECT * FROM orders WHERE id = ? FOR UPDATE', 'i', [(int) $order['id']]);
+            if (
+                !$locked
+                || !in_array($locked['status'], ['pending_approval', 'approved', 'ready_for_pickup'], true)
+            ) {
+                $db->rollback();
+                continue;
+            }
+            release_order_reservation($db, $locked);
+            db_exec(
+                $db,
+                'UPDATE orders SET status = ?, review_note = COALESCE(review_note, ?) WHERE id = ?',
+                'ssi',
+                ['expired', 'Not collected by pickup deadline.', (int) $locked['id']]
+            )->close();
+            $db->commit();
+        } catch (Throwable $e) {
+            $db->rollback();
+        }
+    }
+}
+
 /**
- * Staff/admin approves a pending Rx order: deduct stock, mark approved.
+ * Staff/admin approves a pending Rx order: keep reservation, mark ready for pickup.
  */
 function approve_prescription_order(mysqli $db, int $orderId, int $reviewerId, string $note = ''): void
 {
@@ -289,6 +374,64 @@ function approve_prescription_order(mysqli $db, int $orderId, int $reviewerId, s
         $order = db_one($db, 'SELECT * FROM orders WHERE id = ? FOR UPDATE', 'i', [$orderId]);
         if (!$order || $order['status'] !== 'pending_approval') {
             throw new RuntimeException('That order is not waiting for approval.');
+        }
+
+        $note = trim($note);
+        $pickupBy = $order['pickup_by'] ?? date('Y-m-d H:i:s', time() + pickup_window_seconds());
+        db_exec(
+            $db,
+            'UPDATE orders
+             SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_note = ?, pickup_by = ?
+             WHERE id = ?',
+            'sissi',
+            ['ready_for_pickup', $reviewerId, $note !== '' ? $note : null, $pickupBy, $orderId]
+        )->close();
+
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollback();
+        throw $e;
+    }
+}
+
+/** Staff/admin rejects a pending Rx order and releases reserved stock. */
+function reject_prescription_order(mysqli $db, int $orderId, int $reviewerId, string $note): void
+{
+    $note = trim($note);
+    if ($note === '') {
+        throw new RuntimeException('Please enter a short reason for rejection.');
+    }
+
+    $db->begin_transaction();
+    try {
+        $order = db_one($db, 'SELECT * FROM orders WHERE id = ? FOR UPDATE', 'i', [$orderId]);
+        if (!$order || $order['status'] !== 'pending_approval') {
+            throw new RuntimeException('That order is not waiting for approval.');
+        }
+        release_order_reservation($db, $order);
+        db_exec(
+            $db,
+            'UPDATE orders
+             SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_note = ?
+             WHERE id = ?',
+            'sisi',
+            ['rejected', $reviewerId, $note, $orderId]
+        )->close();
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollback();
+        throw $e;
+    }
+}
+
+/** Customer collected the order: convert reserved_qty into a quantity deduction. */
+function complete_pickup_order(mysqli $db, int $orderId): void
+{
+    $db->begin_transaction();
+    try {
+        $order = db_one($db, 'SELECT * FROM orders WHERE id = ? FOR UPDATE', 'i', [$orderId]);
+        if (!$order || !in_array($order['status'], ['ready_for_pickup', 'approved'], true)) {
+            throw new RuntimeException('That order is not waiting for collection.');
         }
 
         $items = db_all(
@@ -302,40 +445,23 @@ function approve_prescription_order(mysqli $db, int $orderId, int $reviewerId, s
         );
 
         foreach ($items as $item) {
-            $productId = (int) $item['product_id'];
             $qty = (int) $item['quantity'];
-            $stock = db_one(
-                $db,
-                'SELECT quantity FROM branch_stock WHERE branch_id = ? AND product_id = ? FOR UPDATE',
-                'ii',
-                [(int) $order['branch_id'], $productId]
-            );
-            $available = (int) ($stock['quantity'] ?? 0);
-            if ($available < $qty) {
-                throw new RuntimeException($item['name'] . ' no longer has enough stock at this branch.');
-            }
             $stmt = db_exec(
                 $db,
-                'UPDATE branch_stock SET quantity = quantity - ? WHERE branch_id = ? AND product_id = ? AND quantity >= ?',
-                'iiii',
-                [$qty, (int) $order['branch_id'], $productId, $qty]
+                'UPDATE branch_stock
+                 SET quantity = quantity - ?, reserved_qty = reserved_qty - ?
+                 WHERE branch_id = ? AND product_id = ?
+                   AND quantity >= ? AND reserved_qty >= ?',
+                'iiiiii',
+                [$qty, $qty, (int) $order['branch_id'], (int) $item['product_id'], $qty, $qty]
             );
             if ($stmt->affected_rows !== 1) {
-                throw new RuntimeException('Could not reserve stock for ' . $item['name'] . '.');
+                throw new RuntimeException('Could not complete pickup for ' . $item['name'] . '.');
             }
             $stmt->close();
         }
 
-        $note = trim($note);
-        db_exec(
-            $db,
-            'UPDATE orders
-             SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_note = ?
-             WHERE id = ?',
-            'sisi',
-            ['approved', $reviewerId, $note !== '' ? $note : null, $orderId]
-        )->close();
-
+        db_exec($db, 'UPDATE orders SET status = ? WHERE id = ?', 'si', ['completed', $orderId])->close();
         $db->commit();
     } catch (Throwable $e) {
         $db->rollback();
@@ -343,36 +469,15 @@ function approve_prescription_order(mysqli $db, int $orderId, int $reviewerId, s
     }
 }
 
-/** Staff/admin rejects a pending Rx order (no stock change). */
-function reject_prescription_order(mysqli $db, int $orderId, int $reviewerId, string $note): void
-{
-    $note = trim($note);
-    if ($note === '') {
-        throw new RuntimeException('Please enter a short reason for rejection.');
-    }
-
-    $order = db_one($db, 'SELECT id, status FROM orders WHERE id = ?', 'i', [$orderId]);
-    if (!$order || $order['status'] !== 'pending_approval') {
-        throw new RuntimeException('That order is not waiting for approval.');
-    }
-
-    db_exec(
-        $db,
-        'UPDATE orders
-         SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_note = ?
-         WHERE id = ?',
-        'sisi',
-        ['rejected', $reviewerId, $note, $orderId]
-    )->close();
-}
-
 function order_status_label(string $status): string
 {
     return match ($status) {
         'pending_approval' => 'Pending prescription approval',
         'approved' => 'Approved — ready for pickup',
+        'ready_for_pickup' => 'Ready for pickup',
         'rejected' => 'Rejected',
         'completed' => 'Completed',
+        'expired' => 'Expired — not collected',
         default => $status,
     };
 }

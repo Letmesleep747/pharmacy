@@ -44,7 +44,7 @@ require dirname(__DIR__) . '/includes/header.php';
   <?php require dirname(__DIR__) . '/includes/admin_nav.php'; ?>
   <div>
     <h1>Branch stock</h1>
-    <p class="muted">Medication quantity is stored per branch. Low stock is quantity at or below the reorder level.</p>
+    <p class="muted">On-hand quantity is stored per branch. Available = quantity − reserved (held for pickup orders). Low stock uses available stock.</p>
     <form class="filters" method="get">
       <select name="branch">
         <option value="0">All branches</option>
@@ -58,17 +58,20 @@ require dirname(__DIR__) . '/includes/header.php';
       <?= csrf_field() ?>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Branch</th><th>Product</th><th>SKU</th><th>Quantity</th><th>Reorder level</th></tr></thead>
+          <thead><tr><th>Branch</th><th>Product</th><th>SKU</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder level</th></tr></thead>
           <tbody>
             <?php foreach ($rows as $row):
                 $key = (int) $row['branch_id'] . '_' . (int) $row['product_id'];
-                $low = (int) $row['quantity'] <= (int) $row['reorder_level'];
+                $available = (int) ($row['available'] ?? max(0, (int) $row['quantity'] - (int) ($row['reserved_qty'] ?? 0)));
+                $low = $available <= (int) $row['reorder_level'];
                 ?>
               <tr>
                 <td><?= e($row['branch_name']) ?></td>
                 <td><?= e($row['product_name']) ?><?php if ($low): ?> <span class="badge badge-warn">Low</span><?php endif; ?></td>
                 <td><?= e($row['sku']) ?></td>
                 <td><input type="number" min="0" name="quantity[<?= e($key) ?>]" value="<?= (int) $row['quantity'] ?>" style="width:6rem"></td>
+                <td><?= (int) ($row['reserved_qty'] ?? 0) ?></td>
+                <td><?= $available ?></td>
                 <td><input type="number" min="0" name="reorder[<?= e($key) ?>]" value="<?= (int) $row['reorder_level'] ?>" style="width:6rem"></td>
               </tr>
             <?php endforeach; ?>
