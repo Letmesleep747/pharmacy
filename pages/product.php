@@ -1,4 +1,8 @@
 <?php
+/**
+ * Product detail + multi-branch availability (Objective 2).
+ * Shows Available / Out of stock for each pharmacy branch.
+ */
 require dirname(__DIR__) . '/includes/init.php';
 require_storefront();
 
@@ -18,6 +22,7 @@ $availability = product_availability($db, $id);
 $promo = best_promotion_for_product($db, $id);
 $price = (float) $product['unit_price'];
 $discount = $promo ? promotion_discount_amount($promo, $price) : 0;
+$needsRx = (int) ($product['requires_prescription'] ?? 0) === 1;
 
 if (is_post() && ($_POST['action'] ?? '') === 'add') {
     $qty = max(1, post_int('qty', 1));
@@ -33,9 +38,13 @@ require dirname(__DIR__) . '/includes/header.php';
   <div class="container product-hero">
     <div>
       <span class="badge"><?= e($product['category_name']) ?></span>
+      <?php if ($needsRx): ?><span class="badge badge-warn">Prescription required</span><?php endif; ?>
       <h1><?= e($product['name']) ?></h1>
       <p class="muted">SKU <?= e($product['sku']) ?></p>
       <p><?= e($product['description']) ?></p>
+      <?php if ($needsRx): ?>
+        <p class="muted">You must upload a doctor’s prescription at checkout. A pharmacist will approve the order before pickup.</p>
+      <?php endif; ?>
       <p class="price" style="font-size:1.4rem">
         <?= e(money($price - $discount)) ?>
         <?php if ($discount > 0): ?><span class="muted"><s><?= e(money($price)) ?></s></span><?php endif; ?>
@@ -57,8 +66,8 @@ require dirname(__DIR__) . '/includes/header.php';
       <p class="muted">Use this list instead of calling each branch individually.</p>
       <ul class="availability">
         <?php foreach ($availability as $row):
-            $qty = (int) $row['quantity'];
-            $inStock = $qty > 0;
+            $available = (int) ($row['available'] ?? $row['quantity']);
+            $inStock = $available > 0;
             ?>
           <li>
             <div>
@@ -69,7 +78,7 @@ require dirname(__DIR__) . '/includes/header.php';
             <div>
               <?php if ($inStock): ?>
                 <span class="badge badge-ok">Available</span>
-                <div class="muted"><?= $qty ?> in stock</div>
+                <div class="muted"><?= $available ?> available</div>
               <?php else: ?>
                 <span class="badge badge-danger">Out of stock</span>
               <?php endif; ?>

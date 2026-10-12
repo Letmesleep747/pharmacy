@@ -1,5 +1,9 @@
 <?php
+/**
+ * Promotion rules: active date window, percent/fixed discount, product links.
+ */
 
+/** True when the promotion flag is on and today is within start/end dates. */
 function promotion_is_current(array $promo): bool
 {
     $today = date('Y-m-d');
@@ -8,6 +12,7 @@ function promotion_is_current(array $promo): bool
         && $promo['end_date'] >= $today;
 }
 
+/** Calculate discount for a line; fixed discounts never exceed the line total. */
 function promotion_discount_amount(array $promo, float $unitPrice, int $qty = 1): float
 {
     $line = $unitPrice * $qty;
@@ -22,6 +27,7 @@ function promotion_discount_amount(array $promo, float $unitPrice, int $qty = 1)
     return round($amount, 2);
 }
 
+/** Pick the currently active promotion that saves the customer the most money. */
 function best_promotion_for_product(mysqli $db, int $productId): ?array
 {
     $rows = db_all(

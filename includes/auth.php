@@ -1,5 +1,10 @@
 <?php
+/**
+ * Authentication and authorisation helpers.
+ * Passwords are checked with password_verify() against bcrypt hashes in users.password_hash.
+ */
 
+/** Currently signed-in user from the session, or null. */
 function current_user(): ?array
 {
     return $_SESSION['user'] ?? null;
@@ -15,6 +20,7 @@ function user_role(): ?string
     return current_user()['role'] ?? null;
 }
 
+/** Staff desk role: true for staff OR admin (legacy helper). */
 function is_staff(): bool
 {
     $role = user_role();
@@ -26,8 +32,10 @@ function is_admin(): bool
     return user_role() === 'admin';
 }
 
+/** Store a safe subset of the user row in the session after a successful login. */
 function login_user(array $user): void
 {
+    // New session id after login helps prevent session-fixation attacks.
     session_regenerate_id(true);
     $_SESSION['user'] = [
         'id' => (int) $user['id'],
@@ -66,6 +74,7 @@ function require_admin(): void
     require_admin_portal();
 }
 
+/** Simple brute-force guard: lock login attempts for 60 seconds after 5 failures. */
 function login_is_locked(): bool
 {
     $until = $_SESSION['login_lock_until'] ?? 0;
@@ -81,6 +90,10 @@ function record_login_failure(): void
     }
 }
 
+/**
+ * Look up user by email and verify the password hash.
+ * Uses a prepared statement so the email cannot inject SQL.
+ */
 function authenticate(mysqli $db, string $email, string $password): ?array
 {
     $user = db_one($db, 'SELECT id, name, email, password_hash, role FROM users WHERE email = ? LIMIT 1', 's', [$email]);

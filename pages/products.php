@@ -35,6 +35,9 @@ require dirname(__DIR__) . '/includes/header.php';
             ?>
           <article class="card">
             <span class="badge"><?= e($product['category_name']) ?></span>
+            <?php if ((int) ($product['requires_prescription'] ?? 0) === 1): ?>
+              <span class="badge badge-warn">Rx</span>
+            <?php endif; ?>
             <h3><a href="<?= e(url('pages/product.php?id=' . (int) $product['id'])) ?>"><?= e($product['name']) ?></a></h3>
             <p class="muted"><?= e(strlen($product['description']) > 90 ? substr($product['description'], 0, 87) . '…' : $product['description']) ?></p>
             <p class="price">

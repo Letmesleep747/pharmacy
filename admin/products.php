@@ -23,7 +23,7 @@ require dirname(__DIR__) . '/includes/header.php';
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Type</th><th>Status</th><th></th></tr></thead>
         <tbody>
           <?php foreach ($products as $product): ?>
             <tr>
@@ -31,6 +31,7 @@ require dirname(__DIR__) . '/includes/header.php';
               <td><?= e($product['sku']) ?></td>
               <td><?= e($product['category_name']) ?></td>
               <td><?= e(money((float) $product['unit_price'])) ?></td>
+              <td><?= (int) ($product['requires_prescription'] ?? 0) ? 'Rx' : 'OTC' ?></td>
               <td><?= (int) $product['is_active'] ? 'Active' : 'Hidden' ?></td>
               <td>
                 <a href="<?= e(url('admin/product-form.php?id=' . (int) $product['id'])) ?>">Edit</a>

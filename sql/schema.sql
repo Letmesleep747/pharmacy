@@ -1,4 +1,7 @@
 -- Pharmacy Management System — schema (3NF)
+-- Tables: users, branches, categories, products, branch_stock,
+--         promotions, promotion_products, orders, order_items
+-- Stock is per branch (branch_stock), not a single global quantity.
 -- Import with: mysql -u root -p < sql/schema.sql
 
 CREATE DATABASE IF NOT EXISTS pharmacy
@@ -61,6 +64,8 @@ CREATE TABLE products (
   unit_price DECIMAL(10,2) NOT NULL,
   image_path VARCHAR(255) NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
+  -- 1 = customer must upload a prescription; staff must approve before stock is taken
+  requires_prescription TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (id),
   UNIQUE KEY uq_products_sku (sku),
   KEY idx_products_name (name),
@@ -74,6 +79,8 @@ CREATE TABLE branch_stock (
   branch_id INT UNSIGNED NOT NULL,
   product_id INT UNSIGNED NOT NULL,
   quantity INT UNSIGNED NOT NULL DEFAULT 0,
+  -- Held for uncollected pickup orders. Available to customers = quantity - reserved_qty.
+  reserved_qty INT UNSIGNED NOT NULL DEFAULT 0,
   reorder_level INT UNSIGNED NOT NULL DEFAULT 10,
   PRIMARY KEY (branch_id, product_id),
   KEY idx_stock_quantity (quantity),
@@ -120,17 +127,28 @@ CREATE TABLE orders (
   subtotal DECIMAL(10,2) NOT NULL,
   discount_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   total DECIMAL(10,2) NOT NULL,
+  -- pending_approval → ready_for_pickup (after Rx) → completed at collection, or expired
+  status ENUM('pending_approval', 'approved', 'rejected', 'ready_for_pickup', 'completed', 'expired') NOT NULL DEFAULT 'completed',
+  pickup_by DATETIME NULL,
+  prescription_path VARCHAR(255) NULL,
+  reviewed_by INT UNSIGNED NULL,
+  reviewed_at DATETIME NULL,
+  review_note VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_orders_created (created_at),
   KEY idx_orders_branch (branch_id),
   KEY idx_orders_user (user_id),
+  KEY idx_orders_status (status),
   CONSTRAINT fk_orders_user
     FOREIGN KEY (user_id) REFERENCES users (id)
     ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_orders_branch
     FOREIGN KEY (branch_id) REFERENCES branches (id)
-    ON UPDATE CASCADE ON DELETE RESTRICT
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_orders_reviewer
+    FOREIGN KEY (reviewed_by) REFERENCES users (id)
+    ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE order_items (

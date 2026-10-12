@@ -1,4 +1,7 @@
 <?php
+/**
+ * Customer sign-in — only accounts with role = customer are accepted here.
+ */
 require dirname(__DIR__) . '/includes/init.php';
 redirect_signed_in_user();
 

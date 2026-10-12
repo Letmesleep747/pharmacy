@@ -1,4 +1,8 @@
 <?php
+/**
+ * Cross-Site Request Forgery (CSRF) protection for HTML forms.
+ * Every POST must include the hidden _csrf field; init.php runs csrf_verify().
+ */
 
 function csrf_token(): string
 {
@@ -8,11 +12,13 @@ function csrf_token(): string
     return $_SESSION['_csrf'];
 }
 
+/** Hidden input to embed in forms. */
 function csrf_field(): string
 {
     return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">';
 }
 
+/** Reject POST requests that do not carry a matching token (timing-safe compare). */
 function csrf_verify(): void
 {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {

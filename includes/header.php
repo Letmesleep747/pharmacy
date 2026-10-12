@@ -2,6 +2,7 @@
 $pageTitle = ($title ?? 'Home') . ' · ' . APP_NAME;
 $flash = flash_get();
 $user = current_user();
+// Portal drives which navigation links and brand tag appear (customer / staff / admin).
 $portal = current_portal();
 $brandHref = match ($portal) {
     'admin' => url('admin/index.php'),
@@ -54,6 +55,8 @@ $brandTag = match ($portal) {
         <?php elseif ($portal === 'staff'): ?>
           <a class="<?= nav_active('staff/index') ?>" href="<?= e(url('staff/index.php')) ?>">Counter</a>
           <a class="<?= nav_active('staff/pos') ?>" href="<?= e(url('staff/pos.php')) ?>">POS</a>
+          <a class="<?= nav_active('staff/approvals') ?>" href="<?= e(url('staff/approvals.php')) ?>">Rx approvals</a>
+          <a class="<?= nav_active('staff/pickups') ?>" href="<?= e(url('staff/pickups.php')) ?>">Pickups</a>
           <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Stock</a>
           <?php if ($user): ?>
             <span class="nav-user"><?= e($user['name']) ?></span>

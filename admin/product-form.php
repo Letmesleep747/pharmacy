@@ -14,6 +14,7 @@ $description = $product['description'] ?? '';
 $unitPrice = $product['unit_price'] ?? '';
 $categoryId = (int) ($product['category_id'] ?? 0);
 $isActive = (int) ($product['is_active'] ?? 1);
+$requiresRx = (int) ($product['requires_prescription'] ?? 0);
 
 if (is_post()) {
     $name = trim((string) ($_POST['name'] ?? ''));
@@ -22,6 +23,7 @@ if (is_post()) {
     $unitPrice = (string) ($_POST['unit_price'] ?? '');
     $categoryId = post_int('category_id');
     $isActive = isset($_POST['is_active']) ? 1 : 0;
+    $requiresRx = isset($_POST['requires_prescription']) ? 1 : 0;
 
     if ($name === '') {
         $errors[] = 'Name is required.';
@@ -49,17 +51,17 @@ if (is_post()) {
         if ($product) {
             db_exec(
                 $db,
-                'UPDATE products SET category_id=?, name=?, sku=?, description=?, unit_price=?, is_active=? WHERE id=?',
-                'isssdii',
-                [$categoryId, $name, $sku, $description, $price, $isActive, $id]
+                'UPDATE products SET category_id=?, name=?, sku=?, description=?, unit_price=?, is_active=?, requires_prescription=? WHERE id=?',
+                'isssdiii',
+                [$categoryId, $name, $sku, $description, $price, $isActive, $requiresRx, $id]
             )->close();
             flash_set('success', 'Product updated.');
         } else {
             $stmt = db_exec(
                 $db,
-                'INSERT INTO products (category_id, name, sku, description, unit_price, is_active) VALUES (?, ?, ?, ?, ?, ?)',
-                'isssdi',
-                [$categoryId, $name, $sku, $description, $price, $isActive]
+                'INSERT INTO products (category_id, name, sku, description, unit_price, is_active, requires_prescription) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                'isssdii',
+                [$categoryId, $name, $sku, $description, $price, $isActive, $requiresRx]
             );
             $newId = (int) $stmt->insert_id;
             $stmt->close();
@@ -101,6 +103,7 @@ require dirname(__DIR__) . '/includes/header.php';
       <label>Description <textarea name="description" rows="4" required><?= e($description) ?></textarea></label>
       <label>Unit price (RM) <input type="number" step="0.01" min="0" name="unit_price" required value="<?= e((string) $unitPrice) ?>"></label>
       <label><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Visible to customers</label>
+      <label><input type="checkbox" name="requires_prescription" <?= $requiresRx ? 'checked' : '' ?>> Requires prescription (online orders need staff approval)</label>
       <button class="btn" type="submit">Save</button>
     </form>
   </div>

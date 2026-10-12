@@ -1,5 +1,10 @@
 <?php
+/**
+ * Three separate sites (customer / staff / admin) share one database.
+ * Each login page only accepts the matching role; wrong-role users are redirected.
+ */
 
+/** Detect which site the current script belongs to from its URL path. */
 function current_portal(): string
 {
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
@@ -12,6 +17,7 @@ function current_portal(): string
     return 'customer';
 }
 
+/** Home page path for a role after successful sign-in. */
 function portal_home(?string $role = null): string
 {
     $role = $role ?? user_role();
@@ -22,6 +28,7 @@ function portal_home(?string $role = null): string
     };
 }
 
+/** Login page path for a role. */
 function portal_login(?string $role = null): string
 {
     $role = $role ?? user_role();
@@ -32,6 +39,7 @@ function portal_login(?string $role = null): string
     };
 }
 
+/** If already signed in, send the user to their own portal home. */
 function redirect_signed_in_user(): void
 {
     if (!is_logged_in()) {
@@ -40,6 +48,7 @@ function redirect_signed_in_user(): void
     redirect(portal_home());
 }
 
+/** Customer pages only — staff/admin sessions are bounced to their own site. */
 function require_storefront(): void
 {
     $role = user_role();
@@ -49,6 +58,7 @@ function require_storefront(): void
     }
 }
 
+/** Staff counter pages — admin and customers are not allowed here. */
 function require_staff_portal(): void
 {
     if (user_role() === 'staff') {
@@ -62,6 +72,7 @@ function require_staff_portal(): void
     redirect('staff/login.php');
 }
 
+/** Admin management pages — staff/customers are not allowed here. */
 function require_admin_portal(): void
 {
     if (is_admin()) {
@@ -75,6 +86,22 @@ function require_admin_portal(): void
     redirect('admin/login.php');
 }
 
+/** Staff counter tools that admins may also use (e.g. Rx approvals). */
+function require_pharmacy_ops(): void
+{
+    $role = user_role();
+    if ($role === 'staff' || $role === 'admin') {
+        return;
+    }
+    flash_set('error', 'Sign in as staff or administrator.');
+    redirect('staff/login.php');
+}
+
+/**
+ * Shared login POST handler for all three portals.
+ * Password may be correct, but role must still match this site.
+ * @return string Error message, or redirects on success
+ */
 function attempt_portal_login(string $expectedRole): string
 {
     if (login_is_locked()) {

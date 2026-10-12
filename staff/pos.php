@@ -1,4 +1,7 @@
 <?php
+/**
+ * Staff in-store POS — walk-in sales reduce stock at the selected branch.
+ */
 require dirname(__DIR__) . '/includes/init.php';
 require_staff_portal();
 
@@ -44,9 +47,11 @@ if (is_post()) {
             $error = 'Select a branch before completing the sale.';
         } elseif (!$lines) {
             $error = 'Add at least one product.';
+        } elseif (lines_require_prescription($db, $lines) && empty($_POST['rx_verified'])) {
+            $error = 'This sale includes prescription medication. Confirm that a valid prescription was checked in person.';
         } else {
             try {
-                $orderId = complete_sale($db, $lines, $branchId, 'instore', null);
+                $orderId = complete_sale($db, $lines, $branchId, 'instore', null, true, 'completed', null);
                 pos_clear();
                 flash_set('success', 'In-store sale recorded as order #' . $orderId . '.');
                 redirect('staff/order.php?id=' . $orderId);
@@ -61,19 +66,25 @@ $pos = pos_state();
 $lines = [];
 $subtotal = 0.0;
 $discountTotal = 0.0;
+$needsRx = false;
 foreach ($pos['lines'] as $productId => $qty) {
     $product = find_product($db, (int) $productId);
     if (!$product) {
         continue;
     }
+    if ((int) ($product['requires_prescription'] ?? 0) === 1) {
+        $needsRx = true;
+    }
     $unit = (float) $product['unit_price'];
     $pricing = apply_sale_pricing($db, (int) $productId, $unit, (int) $qty);
     $stock = db_one(
         $db,
-        'SELECT quantity FROM branch_stock WHERE branch_id = ? AND product_id = ?',
+        'SELECT quantity, reserved_qty FROM branch_stock WHERE branch_id = ? AND product_id = ?',
         'ii',
         [(int) $pos['branch_id'], (int) $productId]
     );
+    $onHand = (int) ($stock['quantity'] ?? 0);
+    $reserved = (int) ($stock['reserved_qty'] ?? 0);
     $subtotal += $unit * (int) $qty;
     $discountTotal += $pricing['discount'];
     $lines[] = [
@@ -82,7 +93,7 @@ foreach ($pos['lines'] as $productId => $qty) {
         'unit' => $unit,
         'discount' => $pricing['discount'],
         'line_total' => $pricing['line_total'],
-        'stock' => (int) ($stock['quantity'] ?? 0),
+        'stock' => max(0, $onHand - $reserved),
         'promo' => $pricing['promotion'],
     ];
 }
@@ -140,6 +151,9 @@ require dirname(__DIR__) . '/includes/header.php';
                 <tr>
                   <td>
                     <?= e($line['product']['name']) ?>
+                    <?php if ((int) ($line['product']['requires_prescription'] ?? 0) === 1): ?>
+                      <span class="badge badge-warn">Rx</span>
+                    <?php endif; ?>
                     <?php if ($line['promo']): ?><div class="badge badge-ok"><?= e($line['promo']['name']) ?></div><?php endif; ?>
                   </td>
                   <td><?= (int) $pos['branch_id'] ? (int) $line['stock'] : '—' ?></td>
@@ -153,6 +167,12 @@ require dirname(__DIR__) . '/includes/header.php';
           </table>
         </div>
         <p><strong>Total <?= e(money($subtotal - $discountTotal)) ?></strong> (discounts <?= e(money($discountTotal)) ?>)</p>
+        <?php if ($needsRx): ?>
+          <label style="display:block;margin:12px 0">
+            <input type="checkbox" name="rx_verified" value="1" required>
+            Prescription verified in person for all Rx items
+          </label>
+        <?php endif; ?>
         <button class="btn btn-secondary" type="submit" name="action" value="update">Update qty</button>
         <button class="btn btn-danger" type="submit" name="action" value="clear">Clear</button>
         <button class="btn" type="submit" name="action" value="complete">Complete sale</button>

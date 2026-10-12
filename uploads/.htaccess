@@ -1,0 +1,5 @@
+# Block direct browsing of uploaded prescriptions (use staff/prescription.php instead).
+Options -Indexes
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>

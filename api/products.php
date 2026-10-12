@@ -1,4 +1,9 @@
 <?php
+/**
+ * JSON API: search medications.
+ * Example (GET): /pharmacy/api/products?q=paracetamol
+ * Rewritten from /api/products via .htaccess (HTTP GET → this script).
+ */
 require dirname(__DIR__) . '/includes/init.php';
 
 header('Content-Type: application/json; charset=utf-8');

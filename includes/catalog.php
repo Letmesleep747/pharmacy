@@ -1,4 +1,7 @@
 <?php
+/**
+ * Catalogue queries: products, categories, branches, and multi-branch stock.
+ */
 
 function product_search_sql(): string
 {
@@ -8,6 +11,7 @@ function product_search_sql(): string
             WHERE p.is_active = 1';
 }
 
+/** Search active products by name, SKU or description (prepared LIKE). */
 function find_products(mysqli $db, string $q = '', int $categoryId = 0): array
 {
     $sql = product_search_sql();
@@ -40,12 +44,18 @@ function find_product(mysqli $db, int $id): ?array
     );
 }
 
+/**
+ * Stock at every active branch for one medication.
+ * Available = on-hand quantity minus reserved (held) pickup orders.
+ */
 function product_availability(mysqli $db, int $productId): array
 {
     return db_all(
         $db,
         'SELECT b.id, b.name, b.address, b.phone, b.opening_hours,
-                COALESCE(s.quantity, 0) AS quantity
+                COALESCE(s.quantity, 0) AS quantity,
+                COALESCE(s.reserved_qty, 0) AS reserved_qty,
+                GREATEST(0, CAST(COALESCE(s.quantity, 0) AS SIGNED) - CAST(COALESCE(s.reserved_qty, 0) AS SIGNED)) AS available
          FROM branches b
          LEFT JOIN branch_stock s ON s.branch_id = b.id AND s.product_id = ?
          WHERE b.is_active = 1

@@ -1,3 +1,5 @@
 .DS_Store
 Thumbs.db
 config/config.local.php
+uploads/prescriptions/*
+!uploads/prescriptions/.htaccess
