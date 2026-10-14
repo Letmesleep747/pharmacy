@@ -15,12 +15,12 @@ require_once __DIR__ . '/catalog.php';
 require_once __DIR__ . '/sales.php';
 require_once __DIR__ . '/reports.php';
 
-// Session cookie: HttpOnly + SameSite reduces XSS / CSRF risk; Secure when HTTPS is on.
+// One session cookie per site (customer / staff / admin) so they can stay signed in independently.
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-session_name(SESSION_NAME);
+session_name(portal_session_name());
 session_set_cookie_params([
     'lifetime' => 0,
-    'path' => app_base() === '' ? '/' : app_base() . '/',
+    'path' => portal_session_path(),
     'secure' => $secure,
     'httponly' => true,
     'samesite' => 'Lax',

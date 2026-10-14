@@ -60,7 +60,7 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Stock</a>
           <?php if ($user): ?>
             <span class="nav-user"><?= e($user['name']) ?></span>
-            <a href="<?= e(url('pages/logout.php?to=staff')) ?>">Sign out</a>
+            <a href="<?= e(url('staff/logout.php')) ?>">Sign out</a>
           <?php else: ?>
             <a class="<?= nav_active('staff/login') ?>" href="<?= e(url('staff/login.php')) ?>">Sign in</a>
           <?php endif; ?>
@@ -70,7 +70,7 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('admin/reports') ?>" href="<?= e(url('admin/reports.php')) ?>">Reports</a>
           <?php if ($user): ?>
             <span class="nav-user"><?= e($user['name']) ?></span>
-            <a href="<?= e(url('pages/logout.php?to=admin')) ?>">Sign out</a>
+            <a href="<?= e(url('admin/logout.php')) ?>">Sign out</a>
           <?php else: ?>
             <a class="<?= nav_active('admin/login') ?>" href="<?= e(url('admin/login.php')) ?>">Sign in</a>
           <?php endif; ?>

@@ -1,7 +1,7 @@
 <?php
 /**
  * Three separate sites (customer / staff / admin) share one database.
- * Each login page only accepts the matching role; wrong-role users are redirected.
+ * Each site has its own session cookie. Login pages only accept the matching role.
  */
 
 /** Detect which site the current script belongs to from its URL path. */
@@ -15,6 +15,29 @@ function current_portal(): string
         return 'staff';
     }
     return 'customer';
+}
+
+/** PHP session cookie name — one per site so logins do not overwrite each other. */
+function portal_session_name(?string $portal = null): string
+{
+    $prefix = defined('SESSION_NAME') ? SESSION_NAME : 'pharmacy';
+    return match ($portal ?? current_portal()) {
+        'admin' => $prefix . '_admin',
+        'staff' => $prefix . '_staff',
+        default => $prefix . '_customer',
+    };
+}
+
+/** Cookie path limited to that site (admin cookie is not sent to the storefront). */
+function portal_session_path(?string $portal = null): string
+{
+    $base = app_base();
+    $root = $base === '' ? '/' : $base . '/';
+    return match ($portal ?? current_portal()) {
+        'admin' => rtrim($root, '/') . '/admin/',
+        'staff' => rtrim($root, '/') . '/staff/',
+        default => $root,
+    };
 }
 
 /** Home page path for a role after successful sign-in. */
