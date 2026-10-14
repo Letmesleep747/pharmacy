@@ -67,6 +67,8 @@ $brandTag = match ($portal) {
         <?php else: ?>
           <a class="<?= nav_active('admin/index') ?>" href="<?= e(url('admin/index.php')) ?>">Dashboard</a>
           <a class="<?= nav_active('admin/products') ?>" href="<?= e(url('admin/products.php')) ?>">Catalogue</a>
+          <a class="<?= nav_active('admin/approvals') ?>" href="<?= e(url('admin/approvals.php')) ?>">Rx approvals</a>
+          <a class="<?= nav_active('admin/pickups') ?>" href="<?= e(url('admin/pickups.php')) ?>">Pickups</a>
           <a class="<?= nav_active('admin/reports') ?>" href="<?= e(url('admin/reports.php')) ?>">Reports</a>
           <?php if ($user): ?>
             <span class="nav-user"><?= e($user['name']) ?></span>

@@ -117,7 +117,23 @@ function require_pharmacy_ops(): void
         return;
     }
     flash_set('error', 'Sign in as staff or administrator.');
-    redirect('staff/login.php');
+    redirect(current_portal() === 'admin' ? 'admin/login.php' : 'staff/login.php');
+}
+
+/**
+ * Path prefix for shared ops pages (Rx / pickups) under the current portal.
+ * Keeps admin sessions on /admin/ and staff sessions on /staff/.
+ */
+function ops_path(string $page): string
+{
+    $prefix = current_portal() === 'admin' ? 'admin' : 'staff';
+    return $prefix . '/' . ltrim($page, '/');
+}
+
+/** Sidebar include for shared ops pages. */
+function ops_nav_file(): string
+{
+    return current_portal() === 'admin' ? 'admin_nav' : 'staff_nav';
 }
 
 /**
