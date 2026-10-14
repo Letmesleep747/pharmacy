@@ -29,6 +29,15 @@ Online orders **reserve** stock (`reserved_qty`) instead of deducting it immedia
 
 Seeded Rx items: Amoxicillin, Metformin, Amlodipine, Salbutamol.
 
+## Checkout & Payment Options (Demo)
+Customers can select from the following payment methods during checkout:
+- **FPX** (requires selecting a bank from a dropdown)
+- **Credit / Debit Card** (demo only, requires test card details)
+- **Touch 'n Go eWallet** (redirects to a simulated gateway page)
+- **DuitNow QR** (shows a demo QR code)
+
+*Note: All payments are simulated for this assessment. No real transactions are processed. A demo receipt is generated after the order is placed.*
+
 ## Demo logins
 
 Password for every seeded account: **`password`**
@@ -48,8 +57,9 @@ Password for every seeded account: **`password`**
 
 **Existing database** — run in order (skip statements that error if already applied):
 
-1. `sql/migrate_prescription.sql` (if needed)
-2. `sql/migrate_reservation.sql`
+1. `sql/migrate_prescription.sql` (adds `requires_prescription`, `status`, `prescription_path`, etc.)
+2. `sql/migrate_reservation.sql` (adds `reserved_qty`, `pickup_by`, and widens the `status` enum)
+3. `sql/payment_method_migration.sql` (adds `payment_method` column to orders)
 
 ## Apache notes
 
