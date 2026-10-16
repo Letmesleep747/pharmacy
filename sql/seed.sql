@@ -15,26 +15,29 @@ DELETE FROM promotions;
 DELETE FROM branch_stock;
 DELETE FROM products;
 DELETE FROM categories;
-DELETE FROM branches;
 DELETE FROM users;
+DELETE FROM branches;
 
 ALTER TABLE order_items AUTO_INCREMENT = 1;
 ALTER TABLE orders AUTO_INCREMENT = 1;
 ALTER TABLE promotions AUTO_INCREMENT = 1;
 ALTER TABLE products AUTO_INCREMENT = 1;
 ALTER TABLE categories AUTO_INCREMENT = 1;
-ALTER TABLE branches AUTO_INCREMENT = 1;
 ALTER TABLE users AUTO_INCREMENT = 1;
-
-INSERT INTO users (id, name, email, password_hash, role) VALUES
-(1, 'System Admin', 'admin@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin'),
-(2, 'Aisha Rahman', 'staff@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff'),
-(3, 'Lim Wei Ming', 'customer@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'customer');
+ALTER TABLE branches AUTO_INCREMENT = 1;
 
 INSERT INTO branches (id, name, address, phone, opening_hours, is_active) VALUES
 (1, 'Branch A — KL City', '12 Jalan Ampang, Kuala Lumpur', '03-2161-1001', '8:30–21:00', 1),
 (2, 'Branch B — Petaling Jaya', '88 Jalan Universiti, Petaling Jaya', '03-7956-2002', '9:00–20:00', 1),
 (3, 'Branch C — Subang Jaya', '5 Jalan SS15/4, Subang Jaya', '03-5633-3003', '9:00–18:00', 1);
+
+-- Staff accounts are bound to one home branch (parallel counters). Admin/customer have no branch.
+INSERT INTO users (id, name, email, password_hash, role, branch_id) VALUES
+(1, 'System Admin', 'admin@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL),
+(2, 'Aisha Rahman', 'staff@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff', 1),
+(3, 'Lim Wei Ming', 'customer@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'customer', NULL),
+(4, 'Siti Aminah', 'staff_b@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff', 2),
+(5, 'Raj Kumar', 'staff_c@pharmacy.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff', 3);
 
 INSERT INTO categories (id, name) VALUES
 (1, 'Pain relief'),

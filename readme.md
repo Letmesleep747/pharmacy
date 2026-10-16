@@ -10,7 +10,7 @@ Start **Apache** and **MySQL** in the XAMPP control panel first.
 | --- | --- | --- |
 | Customer storefront | [http://localhost/pharmacy/](http://localhost/pharmacy/) | Shop, cart, online pickup |
 | Staff counter | [http://localhost/pharmacy/staff/login.php](http://localhost/pharmacy/staff/login.php) | POS, stock, Rx, pickups (one branch per staff) |
-| Administrator | [http://localhost/pharmacy/admin/login.php](http://localhost/pharmacy/admin/login.php) | Catalogue, promotions, reports, all-branch Rx/pickups |
+| Administrator | [http://localhost/pharmacy/admin/login.php](http://localhost/pharmacy/admin/login.php) | Catalogue, staff accounts, reports, all-branch Rx/pickups |
 | phpMyAdmin | [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/) | Database (local only) |
 
 ## Stock reservation and pickup
@@ -42,6 +42,7 @@ Customers can select from the following payment methods during checkout:
 
 - Each **staff** account is assigned to one home branch and only sees that branch’s sales, Rx queue, pickups, stock, and POS.
 - **Admin** keeps a centralized view across all branches (reports, Rx, pickups).
+- Admin → **Staff accounts** creates logins for a branch and can **reset password** (hashes only — passwords are never shown from the database).
 - For a parallel demo: open two browsers (or normal + Incognito), sign in as Branch A and Branch B staff at the same time.
 
 ## Demo logins

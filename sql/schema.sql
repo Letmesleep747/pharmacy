@@ -23,20 +23,9 @@ DROP TABLE IF EXISTS promotions;
 DROP TABLE IF EXISTS branch_stock;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS categories;
-DROP TABLE IF EXISTS branches;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS branches;
 SET FOREIGN_KEY_CHECKS = 1;
-
-CREATE TABLE users (
-  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  name VARCHAR(120) NOT NULL,
-  email VARCHAR(190) NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  role ENUM('customer', 'staff', 'admin') NOT NULL DEFAULT 'customer',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_users_email (email)
-) ENGINE=InnoDB;
 
 CREATE TABLE branches (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -46,6 +35,23 @@ CREATE TABLE branches (
   opening_hours VARCHAR(120) NOT NULL DEFAULT '9:00–18:00',
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (id)
+) ENGINE=InnoDB;
+
+CREATE TABLE users (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(190) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('customer', 'staff', 'admin') NOT NULL DEFAULT 'customer',
+  -- Staff home branch (NULL for customers and administrators)
+  branch_id INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_users_email (email),
+  KEY idx_users_branch (branch_id),
+  CONSTRAINT fk_users_branch
+    FOREIGN KEY (branch_id) REFERENCES branches (id)
+    ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE categories (
