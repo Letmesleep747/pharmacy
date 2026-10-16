@@ -59,7 +59,7 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('staff/pickups') ?>" href="<?= e(url('staff/pickups.php')) ?>">Pickups</a>
           <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Stock</a>
           <?php if ($user): ?>
-            <span class="nav-user"><?= e($user['name']) ?></span>
+            <span class="nav-user"><?= e($user['name']) ?><?php if (!empty($user['branch_name'])): ?> · <?= e((string) $user['branch_name']) ?><?php endif; ?></span>
             <a href="<?= e(url('staff/logout.php')) ?>">Sign out</a>
           <?php else: ?>
             <a class="<?= nav_active('staff/login') ?>" href="<?= e(url('staff/login.php')) ?>">Sign in</a>

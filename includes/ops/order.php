@@ -22,6 +22,8 @@ if (!$order) {
     redirect(ops_path('pickups.php'));
 }
 
+require_ops_order_access($order, 'pickups.php');
+
 if (is_post() && ($_POST['action'] ?? '') === 'collect') {
     try {
         complete_pickup_order($db, $id);

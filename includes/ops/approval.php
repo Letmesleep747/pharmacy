@@ -22,6 +22,8 @@ if (!$order || $order['status'] !== 'pending_approval') {
     redirect(ops_path('approvals.php'));
 }
 
+require_ops_order_access($order, 'approvals.php');
+
 $items = db_all(
     $db,
     'SELECT oi.*, p.name, p.requires_prescription,

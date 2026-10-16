@@ -5,7 +5,7 @@
  */
 $db = db();
 $id = get_int('id');
-$order = $id ? db_one($db, 'SELECT id, user_id, prescription_path, status FROM orders WHERE id = ?', 'i', [$id]) : null;
+$order = $id ? db_one($db, 'SELECT id, user_id, branch_id, prescription_path, status FROM orders WHERE id = ?', 'i', [$id]) : null;
 
 if (!$order || empty($order['prescription_path'])) {
     http_response_code(404);
@@ -23,6 +23,13 @@ $role = $user['role'] ?? '';
 $isStaff = $role === 'staff' || $role === 'admin';
 $isOwner = (int) ($order['user_id'] ?? 0) === (int) $user['id'];
 if (!$isStaff && !$isOwner) {
+    http_response_code(403);
+    echo 'Access denied.';
+    exit;
+}
+
+// Staff may only open prescriptions for their home branch.
+if ($role === 'staff' && user_branch_id() > 0 && (int) $order['branch_id'] !== user_branch_id()) {
     http_response_code(403);
     echo 'Access denied.';
     exit;

@@ -42,8 +42,40 @@ function login_user(array $user): void
         'name' => $user['name'],
         'email' => $user['email'],
         'role' => $user['role'],
+        'branch_id' => isset($user['branch_id']) && $user['branch_id'] !== null ? (int) $user['branch_id'] : null,
+        'branch_name' => $user['branch_name'] ?? null,
     ];
     unset($_SESSION['login_fails'], $_SESSION['login_lock_until']);
+}
+
+/** Home branch id for the signed-in user (0 if none). */
+function user_branch_id(): int
+{
+    return (int) (current_user()['branch_id'] ?? 0);
+}
+
+/** Display name of the signed-in user's home branch, or empty. */
+function user_branch_name(): string
+{
+    return (string) (current_user()['branch_name'] ?? '');
+}
+
+/**
+ * Staff counter home branch — required for staff portal pages.
+ * Administrators are not branch-bound; do not call this on admin pages.
+ */
+function staff_branch_id(): int
+{
+    if (user_role() !== 'staff') {
+        flash_set('error', 'Sign in on the staff site.');
+        redirect('staff/login.php');
+    }
+    $id = user_branch_id();
+    if ($id <= 0) {
+        flash_set('error', 'Your staff account is not assigned to a branch. Contact an administrator.');
+        redirect('staff/logout.php');
+    }
+    return $id;
 }
 
 function logout_user(): void
@@ -96,7 +128,16 @@ function record_login_failure(): void
  */
 function authenticate(mysqli $db, string $email, string $password): ?array
 {
-    $user = db_one($db, 'SELECT id, name, email, password_hash, role FROM users WHERE email = ? LIMIT 1', 's', [$email]);
+    $user = db_one(
+        $db,
+        'SELECT u.id, u.name, u.email, u.password_hash, u.role, u.branch_id, b.name AS branch_name
+         FROM users u
+         LEFT JOIN branches b ON b.id = u.branch_id
+         WHERE u.email = ?
+         LIMIT 1',
+        's',
+        [$email]
+    );
     if (!$user || !password_verify($password, $user['password_hash'])) {
         return null;
     }

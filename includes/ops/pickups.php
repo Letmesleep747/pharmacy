@@ -1,15 +1,22 @@
 <?php
 /**
  * Shared pickup collection queue — used by staff/pickups.php and admin/pickups.php.
+ * Staff see only their home branch; admin sees all branches.
  */
 $db = db();
 $error = '';
+$branchScope = ops_branch_scope();
 
 if (is_post()) {
     $action = (string) ($_POST['action'] ?? '');
     $orderId = post_int('order_id');
     try {
         if ($action === 'collect' && $orderId > 0) {
+            $target = db_one($db, 'SELECT id, branch_id, status FROM orders WHERE id = ?', 'i', [$orderId]);
+            if (!$target) {
+                throw new RuntimeException('Order not found.');
+            }
+            require_ops_order_access($target, 'pickups.php');
             complete_pickup_order($db, $orderId);
             flash_set('success', 'Order #' . $orderId . ' marked collected. Reserved stock deducted from on-hand quantity.');
             redirect(ops_path('pickups.php'));
@@ -20,18 +27,21 @@ if (is_post()) {
     }
 }
 
-$ready = db_all(
-    $db,
-    'SELECT o.id, o.created_at, o.pickup_by, o.total, o.status,
-            b.name AS branch_name, u.name AS customer_name, u.email AS customer_email
-     FROM orders o
-     INNER JOIN branches b ON b.id = o.branch_id
-     LEFT JOIN users u ON u.id = o.user_id
-     WHERE o.status IN (?, ?)
-     ORDER BY o.pickup_by ASC, o.created_at ASC',
-    'ss',
-    ['ready_for_pickup', 'approved']
-);
+$sql = 'SELECT o.id, o.created_at, o.pickup_by, o.total, o.status,
+               b.name AS branch_name, u.name AS customer_name, u.email AS customer_email
+        FROM orders o
+        INNER JOIN branches b ON b.id = o.branch_id
+        LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.status IN (?, ?)';
+$types = 'ss';
+$params = ['ready_for_pickup', 'approved'];
+if ($branchScope > 0) {
+    $sql .= ' AND o.branch_id = ?';
+    $types .= 'i';
+    $params[] = $branchScope;
+}
+$sql .= ' ORDER BY o.pickup_by ASC, o.created_at ASC';
+$ready = db_all($db, $sql, $types, $params);
 
 $title = 'Pickup collection';
 require dirname(__DIR__) . '/header.php';
@@ -40,7 +50,14 @@ require dirname(__DIR__) . '/header.php';
   <?php require dirname(__DIR__) . '/' . ops_nav_file() . '.php'; ?>
   <div>
     <h1>Pickup collection</h1>
-    <p class="muted">Mark orders as collected when the customer arrives. This converts reserved stock into a permanent deduction.</p>
+    <p class="muted">
+      Mark orders as collected when the customer arrives. This converts reserved stock into a permanent deduction.
+      <?php if ($branchScope > 0): ?>
+        Showing <strong><?= e(user_branch_name() ?: ('branch #' . $branchScope)) ?></strong> only.
+      <?php else: ?>
+        Showing all branches.
+      <?php endif; ?>
+    </p>
     <?php if ($error): ?><p class="flash flash-error"><?= e($error) ?></p><?php endif; ?>
     <?php if (!$ready): ?>
       <p class="empty">No orders waiting for collection.</p>

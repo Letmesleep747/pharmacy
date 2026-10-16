@@ -3,11 +3,23 @@ require dirname(__DIR__) . '/includes/init.php';
 require_staff_portal();
 
 $db = db();
-$low = low_stock_rows($db);
+$branchId = staff_branch_id();
+$branchName = user_branch_name() ?: ('Branch #' . $branchId);
+$low = low_stock_rows($db, $branchId);
 [$from, $to] = report_dates();
-$summary = sales_summary($db, $from, $to);
-$pendingCount = (int) (db_one($db, 'SELECT COUNT(*) AS n FROM orders WHERE status = ?', 's', ['pending_approval'])['n'] ?? 0);
-$pickupCount = (int) (db_one($db, 'SELECT COUNT(*) AS n FROM orders WHERE status IN (?, ?)', 'ss', ['ready_for_pickup', 'approved'])['n'] ?? 0);
+$summary = sales_summary($db, $from, $to, $branchId);
+$pendingCount = (int) (db_one(
+    $db,
+    'SELECT COUNT(*) AS n FROM orders WHERE status = ? AND branch_id = ?',
+    'si',
+    ['pending_approval', $branchId]
+)['n'] ?? 0);
+$pickupCount = (int) (db_one(
+    $db,
+    'SELECT COUNT(*) AS n FROM orders WHERE status IN (?, ?) AND branch_id = ?',
+    'ssi',
+    ['ready_for_pickup', 'approved', $branchId]
+)['n'] ?? 0);
 
 $title = 'Staff counter';
 require dirname(__DIR__) . '/includes/header.php';
@@ -16,7 +28,7 @@ require dirname(__DIR__) . '/includes/header.php';
   <?php require dirname(__DIR__) . '/includes/staff_nav.php'; ?>
   <div>
     <h1>Staff counter</h1>
-    <p class="muted">Record walk-in sales, review prescriptions, complete pickups, and update branch quantities.</p>
+    <p class="muted">Working at <strong><?= e($branchName) ?></strong>. You only see this branch’s sales, prescriptions, pickups, and stock.</p>
     <div class="cards">
       <div class="card stat"><span class="muted">Sales (last 60 days)</span><strong><?= e(money((float) $summary['revenue'])) ?></strong></div>
       <div class="card stat"><span class="muted">Transactions</span><strong><?= (int) $summary['transactions'] ?></strong></div>

@@ -3,7 +3,8 @@ require dirname(__DIR__) . '/includes/init.php';
 require_staff_portal();
 
 $db = db();
-$branchId = get_int('branch');
+$branchId = staff_branch_id();
+$branchName = user_branch_name() ?: ('Branch #' . $branchId);
 
 if (is_post()) {
     $quantities = $_POST['quantity'] ?? [];
@@ -15,7 +16,8 @@ if (is_post()) {
                 continue;
             }
             [$b, $p] = array_map('intval', explode('_', $key, 2));
-            if ($b <= 0 || $p <= 0) {
+            // Staff may only update their assigned branch.
+            if ($b !== $branchId || $p <= 0) {
                 continue;
             }
             $q = max(0, (int) $qty);
@@ -29,12 +31,11 @@ if (is_post()) {
                 [$b, $p, $q, $r]
             )->close();
         }
-        flash_set('success', 'Stock levels saved.');
-        redirect('staff/stock.php' . ($branchId ? ('?branch=' . $branchId) : ''));
+        flash_set('success', 'Stock levels saved for ' . $branchName . '.');
+        redirect('staff/stock.php');
     }
 }
 
-$branches = all_branches($db, false);
 $rows = inventory_rows($db, $branchId);
 
 $title = 'Branch stock';
@@ -44,21 +45,12 @@ require dirname(__DIR__) . '/includes/header.php';
   <?php require dirname(__DIR__) . '/includes/staff_nav.php'; ?>
   <div>
     <h1>Branch stock</h1>
-    <p class="muted">Update on-hand quantities. Available = quantity − reserved. Low stock uses available stock.</p>
-    <form class="filters" method="get">
-      <select name="branch">
-        <option value="0">All branches</option>
-        <?php foreach ($branches as $branch): ?>
-          <option value="<?= (int) $branch['id'] ?>" <?= $branchId === (int) $branch['id'] ? 'selected' : '' ?>><?= e($branch['name']) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <button class="btn btn-secondary" type="submit">Filter</button>
-    </form>
+    <p class="muted">Update on-hand quantities for <strong><?= e($branchName) ?></strong>. Available = quantity − reserved.</p>
     <form method="post">
       <?= csrf_field() ?>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Branch</th><th>Product</th><th>SKU</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder level</th></tr></thead>
+          <thead><tr><th>Product</th><th>SKU</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder level</th></tr></thead>
           <tbody>
             <?php foreach ($rows as $row):
                 $key = (int) $row['branch_id'] . '_' . (int) $row['product_id'];
@@ -66,7 +58,6 @@ require dirname(__DIR__) . '/includes/header.php';
                 $low = $available <= (int) $row['reorder_level'];
                 ?>
               <tr>
-                <td><?= e($row['branch_name']) ?></td>
                 <td><?= e($row['product_name']) ?><?php if ($low): ?> <span class="badge badge-warn">Low</span><?php endif; ?></td>
                 <td><?= e($row['sku']) ?></td>
                 <td><input type="number" min="0" name="quantity[<?= e($key) ?>]" value="<?= (int) $row['quantity'] ?>" style="width:6rem"></td>

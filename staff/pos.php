@@ -1,22 +1,21 @@
 <?php
 /**
- * Staff in-store POS — walk-in sales reduce stock at the selected branch.
+ * Staff in-store POS — walk-in sales reduce stock at the staff member's home branch.
  */
 require dirname(__DIR__) . '/includes/init.php';
 require_staff_portal();
 
 $db = db();
-$pos = pos_state();
+$branchId = staff_branch_id();
+$branchName = user_branch_name() ?: ('Branch #' . $branchId);
+// Lock POS to the assigned branch (no cross-branch switching).
+pos_set_branch($branchId);
+
 $error = '';
 $products = all_products($db, true);
-$branches = all_branches($db);
 
 if (is_post()) {
     $action = (string) ($_POST['action'] ?? '');
-    if ($action === 'branch') {
-        pos_set_branch(post_int('branch_id'));
-        redirect('staff/pos.php');
-    }
     if ($action === 'add') {
         $qty = max(1, post_int('qty', 1));
         $pid = post_int('product_id');
@@ -41,11 +40,10 @@ if (is_post()) {
     }
     if ($action === 'complete') {
         $pos = pos_state();
-        $branchId = (int) $pos['branch_id'];
         $lines = $pos['lines'] ?? [];
-        if ($branchId <= 0) {
-            $error = 'Select a branch before completing the sale.';
-        } elseif (!$lines) {
+        // Always sell against the staff home branch, even if session was tampered.
+        pos_set_branch($branchId);
+        if (!$lines) {
             $error = 'Add at least one product.';
         } elseif (lines_require_prescription($db, $lines) && empty($_POST['rx_verified'])) {
             $error = 'This sale includes prescription medication. Confirm that a valid prescription was checked in person.';
@@ -81,7 +79,7 @@ foreach ($pos['lines'] as $productId => $qty) {
         $db,
         'SELECT quantity, reserved_qty FROM branch_stock WHERE branch_id = ? AND product_id = ?',
         'ii',
-        [(int) $pos['branch_id'], (int) $productId]
+        [$branchId, (int) $productId]
     );
     $onHand = (int) ($stock['quantity'] ?? 0);
     $reserved = (int) ($stock['reserved_qty'] ?? 0);
@@ -105,24 +103,8 @@ require dirname(__DIR__) . '/includes/header.php';
   <?php require dirname(__DIR__) . '/includes/staff_nav.php'; ?>
   <div>
     <h1>In-store sale</h1>
-    <p class="muted">Walk-in transactions decrement stock at the selected branch.</p>
+    <p class="muted">Walk-in transactions decrement stock at <strong><?= e($branchName) ?></strong>.</p>
     <?php if ($error): ?><p class="flash flash-error"><?= e($error) ?></p><?php endif; ?>
-
-    <form class="filters" method="post">
-      <?= csrf_field() ?>
-      <input type="hidden" name="action" value="branch">
-      <label>Branch
-        <select name="branch_id" required>
-          <option value="0">Select branch</option>
-          <?php foreach ($branches as $branch): ?>
-            <option value="<?= (int) $branch['id'] ?>" <?= (int) $pos['branch_id'] === (int) $branch['id'] ? 'selected' : '' ?>>
-              <?= e($branch['name']) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </label>
-      <button class="btn btn-secondary" type="submit">Use branch</button>
-    </form>
 
     <form class="filters" method="post">
       <?= csrf_field() ?>
@@ -156,7 +138,7 @@ require dirname(__DIR__) . '/includes/header.php';
                     <?php endif; ?>
                     <?php if ($line['promo']): ?><div class="badge badge-ok"><?= e($line['promo']['name']) ?></div><?php endif; ?>
                   </td>
-                  <td><?= (int) $pos['branch_id'] ? (int) $line['stock'] : '—' ?></td>
+                  <td><?= (int) $line['stock'] ?></td>
                   <td><input type="number" min="0" name="qty[<?= (int) $line['product']['id'] ?>]" value="<?= (int) $line['qty'] ?>" style="width:4.5rem"></td>
                   <td><?= e(money($line['unit'])) ?></td>
                   <td><?= e(money($line['discount'])) ?></td>

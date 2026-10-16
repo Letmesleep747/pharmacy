@@ -137,6 +137,28 @@ function ops_nav_file(): string
 }
 
 /**
+ * Branch filter for shared ops pages.
+ * 0 = all branches (administrator); otherwise the staff member's home branch.
+ */
+function ops_branch_scope(): int
+{
+    if (current_portal() === 'admin') {
+        return 0;
+    }
+    return staff_branch_id();
+}
+
+/** Block staff from acting on another branch's order. */
+function require_ops_order_access(array $order, string $fallback = 'pickups.php'): void
+{
+    $scope = ops_branch_scope();
+    if ($scope > 0 && (int) ($order['branch_id'] ?? 0) !== $scope) {
+        flash_set('error', 'That order belongs to another branch.');
+        redirect(ops_path($fallback));
+    }
+}
+
+/**
  * Shared login POST handler for all three portals.
  * Password may be correct, but role must still match this site.
  * @return string Error message, or redirects on success
@@ -154,6 +176,10 @@ function attempt_portal_login(string $expectedRole): string
     if (!$user || $user['role'] !== $expectedRole) {
         record_login_failure();
         return 'Those details are not valid for this site.';
+    }
+
+    if ($expectedRole === 'staff' && (int) ($user['branch_id'] ?? 0) <= 0) {
+        return 'This staff account is not assigned to a branch.';
     }
 
     login_user($user);

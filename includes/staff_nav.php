@@ -1,4 +1,7 @@
 <nav class="admin-side" aria-label="Staff">
+  <?php if (user_branch_name() !== ''): ?>
+    <p class="muted" style="margin:0 0 10px;padding:0 4px;font-size:0.85rem"><?= e(user_branch_name()) ?></p>
+  <?php endif; ?>
   <a class="<?= nav_active('staff/index') ?>" href="<?= e(url('staff/index.php')) ?>">Counter home</a>
   <a class="<?= nav_active('staff/pos') ?>" href="<?= e(url('staff/pos.php')) ?>">In-store POS</a>
   <a class="<?= nav_active('staff/approvals') ?>" href="<?= e(url('staff/approvals.php')) ?>">Rx approvals</a>

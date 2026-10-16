@@ -9,8 +9,8 @@ Start **Apache** and **MySQL** in the XAMPP control panel first.
 | Site | URL | Who it is for |
 | --- | --- | --- |
 | Customer storefront | [http://localhost/pharmacy/](http://localhost/pharmacy/) | Shop, cart, online pickup |
-| Staff counter | [http://localhost/pharmacy/staff/login.php](http://localhost/pharmacy/staff/login.php) | POS, stock, Rx approvals, pickups |
-| Administrator | [http://localhost/pharmacy/admin/login.php](http://localhost/pharmacy/admin/login.php) | Catalogue, promotions, reports, Rx, pickups |
+| Staff counter | [http://localhost/pharmacy/staff/login.php](http://localhost/pharmacy/staff/login.php) | POS, stock, Rx, pickups (one branch per staff) |
+| Administrator | [http://localhost/pharmacy/admin/login.php](http://localhost/pharmacy/admin/login.php) | Catalogue, promotions, reports, all-branch Rx/pickups |
 | phpMyAdmin | [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/) | Database (local only) |
 
 ## Stock reservation and pickup
@@ -38,6 +38,12 @@ Customers can select from the following payment methods during checkout:
 
 *Note: All payments are simulated for this assessment. No real transactions are processed. A demo receipt is generated after the order is placed.*
 
+## Branch scope (staff vs admin)
+
+- Each **staff** account is assigned to one home branch and only sees that branch’s sales, Rx queue, pickups, stock, and POS.
+- **Admin** keeps a centralized view across all branches (reports, Rx, pickups).
+- For a parallel demo: open two browsers (or normal + Incognito), sign in as Branch A and Branch B staff at the same time.
+
 ## Demo logins
 
 Password for every seeded account: **`password`**
@@ -45,8 +51,10 @@ Password for every seeded account: **`password`**
 | Site | Email | After sign-in |
 | --- | --- | --- |
 | Customer | `customer@pharmacy.local` | Storefront |
-| Staff | `staff@pharmacy.local` | Counter |
-| Admin | `admin@pharmacy.local` | Dashboard |
+| Staff (Branch A) | `staff@pharmacy.local` | Counter — Branch A only |
+| Staff (Branch B) | `staff_b@pharmacy.local` | Counter — Branch B only |
+| Staff (Branch C) | `staff_c@pharmacy.local` | Counter — Branch C only |
+| Admin | `admin@pharmacy.local` | Dashboard (all branches) |
 
 ## Database setup
 
@@ -60,6 +68,7 @@ Password for every seeded account: **`password`**
 1. `sql/migrate_prescription.sql` (adds `requires_prescription`, `status`, `prescription_path`, etc.)
 2. `sql/migrate_reservation.sql` (adds `reserved_qty`, `pickup_by`, and widens the `status` enum)
 3. `sql/payment_method_migration.sql` (adds `payment_method` column to orders)
+4. `sql/migrate_staff_branch.sql` (adds `users.branch_id` and Branch B/C staff accounts)
 
 ## Apache notes
 

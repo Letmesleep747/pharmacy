@@ -1,20 +1,26 @@
 <?php
 /**
  * Shared Rx approvals queue — used by staff/approvals.php and admin/approvals.php.
+ * Staff see only their home branch; admin sees all branches.
  */
 $db = db();
-$pending = db_all(
-    $db,
-    'SELECT o.id, o.created_at, o.total, o.prescription_path,
-            b.name AS branch_name, u.name AS customer_name, u.email AS customer_email
-     FROM orders o
-     INNER JOIN branches b ON b.id = o.branch_id
-     LEFT JOIN users u ON u.id = o.user_id
-     WHERE o.status = ?
-     ORDER BY o.created_at ASC',
-    's',
-    ['pending_approval']
-);
+$branchScope = ops_branch_scope();
+
+$sql = 'SELECT o.id, o.created_at, o.total, o.prescription_path,
+               b.name AS branch_name, u.name AS customer_name, u.email AS customer_email
+        FROM orders o
+        INNER JOIN branches b ON b.id = o.branch_id
+        LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.status = ?';
+$types = 's';
+$params = ['pending_approval'];
+if ($branchScope > 0) {
+    $sql .= ' AND o.branch_id = ?';
+    $types .= 'i';
+    $params[] = $branchScope;
+}
+$sql .= ' ORDER BY o.created_at ASC';
+$pending = db_all($db, $sql, $types, $params);
 
 $title = 'Prescription approvals';
 require dirname(__DIR__) . '/header.php';
@@ -23,7 +29,14 @@ require dirname(__DIR__) . '/header.php';
   <?php require dirname(__DIR__) . '/' . ops_nav_file() . '.php'; ?>
   <div>
     <h1>Prescription approvals</h1>
-    <p class="muted">Review uploaded prescriptions. Approving keeps the reservation and marks the order ready for pickup. Rejecting releases reserved stock.</p>
+    <p class="muted">
+      Review uploaded prescriptions. Approving keeps the reservation and marks the order ready for pickup. Rejecting releases reserved stock.
+      <?php if ($branchScope > 0): ?>
+        Showing <strong><?= e(user_branch_name() ?: ('branch #' . $branchScope)) ?></strong> only.
+      <?php else: ?>
+        Showing all branches.
+      <?php endif; ?>
+    </p>
     <?php if (!$pending): ?>
       <p class="empty">No orders waiting for approval.</p>
     <?php else: ?>
