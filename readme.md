@@ -29,6 +29,11 @@ Online orders **reserve** stock (`reserved_qty`) instead of deducting it immedia
 
 Seeded Rx items: Amoxicillin, Metformin, Amlodipine, Salbutamol.
 
+At checkout, customers choose:
+
+1. **Upload online** — pay now, stock reserved, order `pending_approval` until branch staff approve  
+2. **Walk in** — no online order and no reservation; bring the paper prescription to a branch (POS)
+
 ## Checkout & Payment Options (Demo)
 Customers can select from the following payment methods during checkout:
 - **FPX** (requires selecting a bank from a dropdown)

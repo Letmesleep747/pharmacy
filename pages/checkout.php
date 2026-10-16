@@ -2,7 +2,8 @@
 /**
  * Customer checkout.
  * Online orders reserve available stock (quantity − reserved_qty) for 48 hours.
- * Rx carts also require a prescription upload and stay pending until staff approve.
+ * Rx carts: customer chooses online upload (pay + reserve + pending approval)
+ * or walk-in (no online order / no reservation — present Rx at the counter).
  */
 require dirname(__DIR__) . '/includes/init.php';
 require_storefront();
@@ -94,6 +95,7 @@ $error            = '';
 $selectedPayment  = '';
 $selectedBank     = '';
 $selectedBranchId = 0;
+$rxMethod         = 'online'; // online upload | walkin (only when cart has Rx)
 $receipt          = null;
 $pending          = null;
 
@@ -121,13 +123,10 @@ if (is_post()) {
         }
 
         try {
-            // --- MERGED PRESCRIPTION LOGIC ---
-            $prescriptionPath = null;
-            $status = 'ready_for_pickup';
-
-            if ($needsRx) {
-                $prescriptionPath = save_prescription_upload($_FILES['prescription'] ?? []);
-                $status = 'pending_approval';
+            $prescriptionPath = $pending['prescription_path'] ?? null;
+            $status = (string) ($pending['status'] ?? 'ready_for_pickup');
+            if ($needsRx && ($prescriptionPath === null || $prescriptionPath === '')) {
+                throw new RuntimeException('Prescription file missing. Please start checkout again and upload your prescription.');
             }
 
             $orderId = complete_sale(
@@ -153,6 +152,7 @@ if (is_post()) {
                 'payment_detail' => $pending['payment_detail'],
                 'reference'      => $pending['reference'],
                 'total'          => $resolveOrderTotal($db, (int) $orderId, (float) $pending['total']),
+                'status'         => $status,
             ];
 
             redirect('pages/checkout.php?step=receipt');
@@ -169,8 +169,20 @@ if (is_post()) {
     $selectedBranchId = post_int('branch_id');
     $selectedPayment  = trim((string) ($_POST['payment_method'] ?? ''));
     $selectedBank     = trim((string) ($_POST['fpx_bank'] ?? ''));
+    $rxMethod         = trim((string) ($_POST['rx_method'] ?? 'online'));
+    if (!$needsRx) {
+        $rxMethod = 'online';
+    }
+    if ($needsRx && !in_array($rxMethod, ['online', 'walkin'], true)) {
+        $rxMethod = 'online';
+    }
 
-    if (!array_key_exists($selectedPayment, $paymentMethods)) {
+    /* Walk-in Rx: no online order and no stock reservation. */
+    if ($error === '' && $needsRx && $rxMethod === 'walkin') {
+        $error = 'Walk-in prescriptions are not checked out online. Choose “Upload online” to pay and reserve, or visit a branch with your paper prescription.';
+    }
+
+    if ($error === '' && !array_key_exists($selectedPayment, $paymentMethods)) {
         $error = 'Please select a valid payment method.';
     }
 
@@ -234,21 +246,36 @@ if (is_post()) {
 
         /* ---- TnG goes through the simulated gateway first ---- */
         if ($selectedPayment === 'tng') {
-            $_SESSION['tng_pending'] = [
-                'branch_id'      => (int) $branch['id'],
-                'branch_name'    => $branch['name'],
-                'branch_address' => $branch['address'],
-                'payment_detail' => "Touch 'n Go eWallet",
-                'reference'      => 'TNG' . strtoupper(bin2hex(random_bytes(4))),
-                'total'          => $cartTotal,
-            ];
+            try {
+                $prescriptionPath = null;
+                $status = 'ready_for_pickup';
+                if ($needsRx) {
+                    $prescriptionPath = save_prescription_upload($_FILES['prescription'] ?? []);
+                    $status = 'pending_approval';
+                }
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
+            }
 
-            redirect('pages/checkout.php?step=tng');
+            if ($error === '') {
+                $_SESSION['tng_pending'] = [
+                    'branch_id'          => (int) $branch['id'],
+                    'branch_name'        => $branch['name'],
+                    'branch_address'     => $branch['address'],
+                    'payment_detail'     => "Touch 'n Go eWallet",
+                    'reference'          => 'TNG' . strtoupper(bin2hex(random_bytes(4))),
+                    'total'              => $cartTotal,
+                    'prescription_path'  => $prescriptionPath,
+                    'status'             => $status,
+                ];
+
+                redirect('pages/checkout.php?step=tng');
+            }
         }
 
         /* ---- Everything else completes immediately ---- */
+        if ($error === '' && $selectedPayment !== 'tng') {
         try {
-            // --- MERGED PRESCRIPTION LOGIC ---
             $prescriptionPath = null;
             $status = 'ready_for_pickup';
 
@@ -279,12 +306,14 @@ if (is_post()) {
                 'payment_detail' => $paymentDetail,
                 'reference'      => 'PAY' . strtoupper(bin2hex(random_bytes(4))),
                 'total'          => $resolveOrderTotal($db, (int) $orderId, $cartTotal),
+                'status'         => $status,
             ];
 
             redirect('pages/checkout.php?step=receipt');
 
         } catch (Throwable $e) {
             $error = $e->getMessage();
+        }
         }
     }
 }
@@ -702,6 +731,12 @@ require dirname(__DIR__) . '/includes/header.php';
                     <p class="muted">
                         Demo payment — no real money was transferred.
                     </p>
+                    <?php if (($receipt['status'] ?? '') === 'pending_approval'): ?>
+                        <p class="flash flash-info" style="margin-top:12px">
+                            Prescription uploaded. Stock is reserved at <?= e($receipt['branch_name']) ?>
+                            while branch staff review your Rx. You can collect after approval.
+                        </p>
+                    <?php endif; ?>
                 </div>
 
                 <div class="receipt-amount">
@@ -861,7 +896,11 @@ require dirname(__DIR__) . '/includes/header.php';
                 <h2>Pharmacy Checkout</h2>
 
                 <p class="muted">
-                    Select your pickup branch and preferred payment method.
+                    <?php if ($needsRx): ?>
+                        Your cart includes prescription medication. Choose how you will provide the prescription, then continue.
+                    <?php else: ?>
+                        Select your pickup branch and preferred payment method.
+                    <?php endif; ?>
                 </p>
 
                 <?php if ($error !== ''): ?>
@@ -870,15 +909,45 @@ require dirname(__DIR__) . '/includes/header.php';
                     </p>
                 <?php endif; ?>
 
-                <!-- ADDED enctype for prescription upload -->
                 <form method="post" class="form" id="checkout-form" enctype="multipart/form-data">
 
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="place_order">
 
+                    <?php if ($needsRx): ?>
+                    <fieldset class="payment-section" style="margin:0 0 18px;border:0;padding:0">
+                        <legend style="font-weight:600;margin-bottom:8px">How will you provide your prescription?</legend>
+                        <label style="display:block;margin-bottom:8px">
+                            <input type="radio" name="rx_method" id="rx_method_online" value="online" <?= $rxMethod !== 'walkin' ? 'checked' : '' ?>>
+                            <strong>Upload online</strong> — pay now, we reserve stock at your branch, then staff approve before pickup
+                        </label>
+                        <label style="display:block">
+                            <input type="radio" name="rx_method" id="rx_method_walkin" value="walkin" <?= $rxMethod === 'walkin' ? 'checked' : '' ?>>
+                            <strong>Walk in</strong> — bring the paper prescription to a branch (no online order, no stock reservation)
+                        </label>
+                    </fieldset>
+
+                    <div id="rx-walkin-panel" class="payment-section" <?= $rxMethod === 'walkin' ? '' : 'hidden' ?> style="margin-bottom:18px">
+                        <h3>Walk-in with your prescription</h3>
+                        <p class="payment-note">
+                            Online checkout is not used for this option. Visit any active branch with a valid prescription;
+                            counter staff will verify it in person and sell from available stock (POS). Nothing is reserved online.
+                        </p>
+                        <ul class="muted" style="margin:0 0 12px;padding-left:1.2rem">
+                            <?php foreach ($branches as $branch): ?>
+                                <li><strong><?= e($branch['name']) ?></strong> — <?= e($branch['address']) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <a class="btn btn-secondary" href="<?= e(url('pages/branches.php')) ?>">View branches</a>
+                        <a class="btn btn-secondary" href="<?= e(url('pages/cart.php')) ?>">Back to cart</a>
+                    </div>
+                    <?php endif; ?>
+
+                    <div id="checkout-online-fields" <?= ($needsRx && $rxMethod === 'walkin') ? 'hidden' : '' ?>>
+
                     <label for="branch_id">Pickup Branch</label>
 
-                    <select name="branch_id" id="branch_id" required>
+                    <select name="branch_id" id="branch_id" <?= ($needsRx && $rxMethod === 'walkin') ? '' : 'required' ?>>
                         <option value="">Choose a branch</option>
 
                         <?php foreach ($branches as $branch): ?>
@@ -894,22 +963,21 @@ require dirname(__DIR__) . '/includes/header.php';
                         <?php endforeach; ?>
                     </select>
 
-                    <!-- ============ PRESCRIPTION UPLOAD (MERGED FEATURE) ============ -->
                     <?php if ($needsRx): ?>
-                    <div class="payment-section" style="margin-top: 18px;">
-                        <h3 style="color: #d81b60;">Prescription Required</h3>
+                    <div id="rx-upload-panel" class="payment-section" style="margin-top: 18px;">
+                        <h3>Upload prescription</h3>
                         <p class="payment-note">
-                            Your cart includes prescription medication. 
-                            Upload a doctor’s prescription (PDF/JPG/PNG). 
-                            Staff must approve before you can collect.
+                            Upload a clear photo or PDF (max 5 MB). After you pay, stock is reserved for 48 hours
+                            and the order stays <strong>pending approval</strong> until branch staff review it.
+                            If rejected, the reservation is released (demo refund message).
                         </p>
-                        <label for="prescription">Upload Prescription (Max 5 MB)</label>
-                        <input 
-                            type="file" 
-                            name="prescription" 
-                            id="prescription" 
-                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" 
-                            required
+                        <label for="prescription">Prescription file (PDF/JPG/PNG)</label>
+                        <input
+                            type="file"
+                            name="prescription"
+                            id="prescription"
+                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                            <?= $rxMethod !== 'walkin' ? 'required' : '' ?>
                         >
                     </div>
                     <?php endif; ?>
@@ -1088,9 +1156,11 @@ require dirname(__DIR__) . '/includes/header.php';
                         <p><strong>Demo gateway — no real payment processed.</strong></p>
                     </div>
 
-                    <button type="submit" class="payment-submit">
+                    <button type="submit" class="payment-submit" id="checkout-submit">
                         Place Order &amp; Pay
                     </button>
+
+                    </div><!-- #checkout-online-fields -->
 
                 </form>
             </div>
@@ -1101,6 +1171,44 @@ require dirname(__DIR__) . '/includes/header.php';
 
 <?php if ($step === 'form'): ?>
 <script>
+(function () {
+    const onlineFields = document.getElementById('checkout-online-fields');
+    const walkinPanel = document.getElementById('rx-walkin-panel');
+    const rxOnline = document.getElementById('rx_method_online');
+    const rxWalkin = document.getElementById('rx_method_walkin');
+    const prescription = document.getElementById('prescription');
+    const branchSelect = document.getElementById('branch_id');
+    const methodSelect = document.getElementById('payment_method');
+
+    function syncRxMethod() {
+        if (!rxOnline || !rxWalkin || !onlineFields) {
+            return;
+        }
+        const walkin = rxWalkin.checked;
+        onlineFields.hidden = walkin;
+        if (walkinPanel) {
+            walkinPanel.hidden = !walkin;
+        }
+        if (prescription) {
+            prescription.required = !walkin;
+        }
+        if (branchSelect) {
+            branchSelect.required = !walkin;
+        }
+        if (methodSelect) {
+            methodSelect.required = !walkin;
+        }
+    }
+
+    if (rxOnline) {
+        rxOnline.addEventListener('change', syncRxMethod);
+    }
+    if (rxWalkin) {
+        rxWalkin.addEventListener('change', syncRxMethod);
+    }
+    syncRxMethod();
+})();
+
 const methodSelect = document.getElementById('payment_method');
 
 if (methodSelect) {
@@ -1172,6 +1280,13 @@ if (methodSelect) {
 
     if (checkoutForm) {
         checkoutForm.addEventListener('submit', function (event) {
+            const walkin = document.getElementById('rx_method_walkin');
+            if (walkin && walkin.checked) {
+                event.preventDefault();
+                alert('Walk-in does not use online checkout. Visit a branch with your prescription, or choose Upload online.');
+                return;
+            }
+
             if (methodSelect.value !== 'card') {
                 return;
             }
