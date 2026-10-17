@@ -14,6 +14,7 @@ require_once __DIR__ . '/promotions.php';
 require_once __DIR__ . '/catalog.php';
 require_once __DIR__ . '/sales.php';
 require_once __DIR__ . '/reports.php';
+require_once __DIR__ . '/notifications.php';
 
 // One session cookie per site (customer / staff / admin) so they can stay signed in independently.
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');

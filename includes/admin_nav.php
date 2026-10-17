@@ -9,4 +9,5 @@
   <a class="<?= nav_active('admin/approvals') ?>" href="<?= e(url('admin/approvals.php')) ?>">Rx approvals</a>
   <a class="<?= nav_active('admin/pickups') ?>" href="<?= e(url('admin/pickups.php')) ?>">Pickups</a>
   <a class="<?= nav_active('admin/reports') ?>" href="<?= e(url('admin/reports.php')) ?>">Reports</a>
+  <a class="<?= nav_active('admin/notifications') ?>" href="<?= e(url('admin/notifications.php')) ?>">Notifications</a>
 </nav>

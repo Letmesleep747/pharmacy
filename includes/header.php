@@ -45,6 +45,7 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('pages/promotions') ?>" href="<?= e(url('pages/promotions.php')) ?>">Promotions</a>
           <a class="<?= nav_active('pages/branches') ?>" href="<?= e(url('pages/branches.php')) ?>">Branches</a>
           <a class="<?= nav_active('pages/cart') ?>" href="<?= e(url('pages/cart.php')) ?>">Cart (<?= (int) cart_count() ?>)</a>
+          <a class="<?= nav_active('pages/notifications') ?>" href="<?= e(url('pages/notifications.php')) ?>">Notifications</a>
           <?php if ($user): ?>
             <span class="nav-user"><?= e($user['name']) ?></span>
             <a href="<?= e(url('pages/logout.php')) ?>">Sign out</a>
@@ -58,6 +59,7 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('staff/approvals') ?>" href="<?= e(url('staff/approvals.php')) ?>">Rx approvals</a>
           <a class="<?= nav_active('staff/pickups') ?>" href="<?= e(url('staff/pickups.php')) ?>">Pickups</a>
           <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Stock</a>
+          <a class="<?= nav_active('staff/notifications') ?>" href="<?= e(url('staff/notifications.php')) ?>">Notifications</a>
           <?php if ($user): ?>
             <span class="nav-user"><?= e($user['name']) ?><?php if (!empty($user['branch_name'])): ?> · <?= e((string) $user['branch_name']) ?><?php endif; ?></span>
             <a href="<?= e(url('staff/logout.php')) ?>">Sign out</a>
@@ -70,6 +72,7 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('admin/approvals') ?>" href="<?= e(url('admin/approvals.php')) ?>">Rx approvals</a>
           <a class="<?= nav_active('admin/pickups') ?>" href="<?= e(url('admin/pickups.php')) ?>">Pickups</a>
           <a class="<?= nav_active('admin/reports') ?>" href="<?= e(url('admin/reports.php')) ?>">Reports</a>
+          <a class="<?= nav_active('admin/notifications') ?>" href="<?= e(url('admin/notifications.php')) ?>">Notifications</a>
           <?php if ($user): ?>
             <span class="nav-user"><?= e($user['name']) ?></span>
             <a href="<?= e(url('admin/logout.php')) ?>">Sign out</a>
