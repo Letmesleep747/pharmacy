@@ -59,6 +59,66 @@ function lines_require_prescription(mysqli $db, array $lines): bool
 }
 
 /**
+ * Calculate cart/POS lines using the same pricing rules as complete_sale().
+ * Returns itemised rows plus subtotal, discount and final total.
+ * This is the SINGLE source of truth for on-screen cart totals.
+ */
+function cart_summary(mysqli $db, array $lines): array
+{
+    $items = [];
+    $subtotal = 0.0;
+    $discountTotal = 0.0;
+
+    foreach ($lines as $productId => $qty) {
+        $productId = (int) $productId;
+        $qty = (int) $qty;
+
+        if ($qty <= 0) {
+            continue;
+        }
+
+        $product = db_one(
+            $db,
+            'SELECT id, name, unit_price, is_active FROM products WHERE id = ?',
+            'i',
+            [$productId]
+        );
+
+        if (!$product || (int) $product['is_active'] !== 1) {
+            continue;
+        }
+
+        $unitPrice = (float) $product['unit_price'];
+        $pricing = apply_sale_pricing($db, $productId, $unitPrice, $qty);
+
+        $lineDiscount = (float) $pricing['discount'];
+        $lineTotal    = (float) $pricing['line_total'];
+
+        $subtotal      += $unitPrice * $qty;
+        $discountTotal += $lineDiscount;
+
+        $items[] = [
+            'product_id'      => $productId,
+            'name'            => $product['name'],
+            'quantity'        => $qty,
+            'unit_price'      => $unitPrice,
+            'discount_amount' => $lineDiscount,
+            'line_total'      => $lineTotal,
+        ];
+    }
+
+    $subtotal      = round($subtotal, 2);
+    $discountTotal = round($discountTotal, 2);
+
+    return [
+        'items'    => $items,
+        'subtotal' => $subtotal,
+        'discount' => $discountTotal,
+        'total'    => round($subtotal - $discountTotal, 2),
+    ];
+}
+
+/**
  * Save an uploaded prescription (PDF/JPG/PNG, max 5 MB).
  * Files live under uploads/prescriptions/ (blocked from direct web listing).
  * @return string Relative path stored in orders.prescription_path
@@ -96,6 +156,32 @@ function save_prescription_upload(array $file): string
     }
 
     return 'uploads/prescriptions/' . $name;
+}
+
+/** Save customer-uploaded proof of payment (JPG/PNG/PDF, max 5 MB). */
+function save_payment_receipt_upload(array $file): string
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Please upload your payment receipt or transaction screenshot.');
+    }
+    if (($file['size'] ?? 0) > 5 * 1024 * 1024) {
+        throw new RuntimeException('Payment receipt must be 5 MB or smaller.');
+    }
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file($file['tmp_name']);
+    $allowed = ['application/pdf' => 'pdf', 'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    if (!isset($allowed[$mime])) {
+        throw new RuntimeException('Payment receipt must be a PDF, JPG, PNG, or WEBP file.');
+    }
+    $dir = dirname(__DIR__) . '/uploads/payment_receipts';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('Could not create payment receipt folder.');
+    }
+    $name = 'payment_' . date('YmdHis') . '_' . bin2hex(random_bytes(5)) . '.' . $allowed[$mime];
+    if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $name)) {
+        throw new RuntimeException('Could not save the payment receipt.');
+    }
+    return 'uploads/payment_receipts/' . $name;
 }
 
 /** Staff POS basket for the current counter session. */
