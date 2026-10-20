@@ -60,4 +60,4 @@ require dirname(__DIR__) . '/includes/header.php';
         <?php endif; ?>
     </div>
 </div>
-<?php require dirname(__DIR__) . '/footer.php'; ?>
+<?php require dirname(__DIR__) . '/includes/footer.php'; ?>
