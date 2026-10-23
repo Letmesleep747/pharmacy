@@ -42,6 +42,9 @@ function sync_prescription_notifications(mysqli $db, array $user): void {
                 [$userId,(int)$order['id'],'prescription_submitted','Prescription awaiting approval','Order #' . $order['id'] . ' has a prescription awaiting review.'])->close();
         }
     } elseif ($role === 'customer') {
+        $milestones = db_all($db, "SELECT id FROM orders WHERE user_id = ? AND source = 'online' AND status IN ('ready_for_pickup','completed')", 'i', [$userId]);
+        foreach ($milestones as $milestone) notify_customer_order_status($db, (int)$milestone['id']);
+
         $orders = db_all($db, "SELECT id, status, review_note FROM orders WHERE user_id = ? AND prescription_path IS NOT NULL AND prescription_path <> '' AND status IN ('approved','ready_for_pickup','rejected')", 'i', [$userId]);
         foreach ($orders as $order) {
             $approved = $order['status'] !== 'rejected';
@@ -53,4 +56,19 @@ function sync_prescription_notifications(mysqli $db, array $user): void {
                 [$userId,(int)$order['id'],$type,$title,$message])->close();
         }
     }
+}
+
+
+/** Create a customer notification for an online order's current pickup milestone. */
+function notify_customer_order_status(mysqli $db, int $orderId): void {
+    $order = db_one($db, 'SELECT id, user_id, source, status FROM orders WHERE id = ?', 'i', [$orderId]);
+    if (!$order || !$order['user_id'] || $order['source'] !== 'online') return;
+    $events = [
+        'ready_for_pickup' => ['order_ready_for_pickup', 'Order ready for pickup', "Your order #$orderId is ready for pickup. Please collect it at your selected pharmacy branch."],
+        'completed' => ['order_completed', 'Order completed', "Your order #$orderId has been marked as collected and completed. Thank you for shopping with us!"],
+    ];
+    if (!isset($events[$order['status']])) return;
+    [$type, $title, $message] = $events[$order['status']];
+    db_exec($db, 'INSERT IGNORE INTO notifications (user_id,order_id,type,title,message) VALUES (?,?,?,?,?)', 'iisss',
+        [(int)$order['user_id'], $orderId, $type, $title, $message])->close();
 }
