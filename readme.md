@@ -8,6 +8,7 @@ Start **Apache** and **MySQL** in the XAMPP control panel first.
 
 | Site | URL | Who it is for |
 | --- | --- | --- |
+| Customer sign-in | [http://localhost/pharmacy/pages/login.php](http://localhost/pharmacy/pages/login.php) | Customer account login |
 | Customer storefront | [http://localhost/pharmacy/](http://localhost/pharmacy/) | Shop, cart, online pickup |
 | Staff counter | [http://localhost/pharmacy/staff/login.php](http://localhost/pharmacy/staff/login.php) | POS, stock, Rx, pickups (one branch per staff) |
 | Administrator | [http://localhost/pharmacy/admin/login.php](http://localhost/pharmacy/admin/login.php) | Catalogue, staff accounts, reports, all-branch Rx/pickups |

@@ -3,8 +3,6 @@
  * Staff counter sign-in — only accounts with role = staff.
  */
 require dirname(__DIR__) . '/includes/init.php';
-redirect_signed_in_user();
-
 $error = '';
 if (is_post()) {
     $error = attempt_portal_login('staff');
