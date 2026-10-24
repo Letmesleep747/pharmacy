@@ -53,13 +53,16 @@ if (is_post()) {
                 $msg = $order['status'] === 'pending_approval'
                     ? 'Your payment receipt was approved by admin/staff. Your prescription is still awaiting branch review.'
                     : 'Your payment receipt was approved by admin/staff. Your order is being processed at ' . $order['branch_name'] . '.';
-
-                db_exec(
-                    $db,
-                    'INSERT INTO notifications (user_id, order_id, type, title, message) VALUES (?,?,?,?,?)',
-                    'iisss',
-                    [$userId, $id, 'payment_approved', 'Payment receipt approved', $msg]
-                )->close();
+                try {
+                    db_exec(
+                        $db,
+                        'INSERT INTO notifications (user_id, order_id, type, title, message) VALUES (?,?,?,?,?)',
+                        'iisss',
+                        [$userId, $id, 'payment_approved', 'Payment receipt approved', $msg]
+                    )->close();
+                } catch (Throwable $notifyError) {
+                    // Approval still succeeds if notification ENUM is outdated.
+                }
             }
 
             flash_set('success', 'Payment receipt approved. Customer has been notified.');
@@ -110,18 +113,22 @@ if (is_post()) {
 
             $userId = (int) ($order['user_id'] ?? 0);
             if ($userId > 0) {
-                db_exec(
-                    $db,
-                    'INSERT INTO notifications (user_id, order_id, type, title, message) VALUES (?,?,?,?,?)',
-                    'iisss',
-                    [
-                        $userId,
-                        $id,
-                        'payment_rejected_refunded',
-                        'Payment rejected — refund processed',
-                        'Your payment receipt for order #' . $id . ' was rejected. Demo refund status: refunded. Reason: ' . $note . '. No real money is moved by this demo system.',
-                    ]
-                )->close();
+                try {
+                    db_exec(
+                        $db,
+                        'INSERT INTO notifications (user_id, order_id, type, title, message) VALUES (?,?,?,?,?)',
+                        'iisss',
+                        [
+                            $userId,
+                            $id,
+                            'payment_rejected_refunded',
+                            'Payment rejected — refund processed',
+                            'Your payment receipt for order #' . $id . ' was rejected. Demo refund status: refunded. Reason: ' . $note . '. No real money is moved by this demo system.',
+                        ]
+                    )->close();
+                } catch (Throwable $notifyError) {
+                    // Rejection still succeeds if notification ENUM is outdated.
+                }
             }
 
             flash_set('info', 'Payment rejected; demo refund marked as processed and customer notified.');
@@ -151,10 +158,27 @@ require dirname(__DIR__) . '/header.php';
         <?php endif; ?>
 
         <?php if (!empty($order['payment_receipt_path'])): ?>
+            <?php
+              $receiptUrl = url(ops_path('payment-receipt.php?id=' . (int) $id));
+              $receiptRel = str_replace('\\', '/', (string) $order['payment_receipt_path']);
+              $isImage = (bool) preg_match('/\.(jpe?g|png|webp)$/i', $receiptRel);
+            ?>
             <p>
                 <a class="btn btn-secondary" target="_blank" rel="noopener"
-                   href="<?= e(url($order['payment_receipt_path'])) ?>">View uploaded payment receipt</a>
+                   href="<?= e($receiptUrl) ?>">View uploaded payment receipt</a>
             </p>
+            <div class="panel" style="padding:12px;margin:12px 0;max-width:640px">
+              <p class="muted" style="margin-top:0">Receipt preview</p>
+              <?php if ($isImage): ?>
+                <a href="<?= e($receiptUrl) ?>" target="_blank" rel="noopener">
+                  <img src="<?= e($receiptUrl) ?>" alt="Payment receipt for order #<?= (int) $id ?>"
+                       style="max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line)">
+                </a>
+              <?php else: ?>
+                <iframe src="<?= e($receiptUrl) ?>" title="Payment receipt PDF"
+                        style="width:100%;min-height:420px;border:1px solid var(--line);border-radius:8px;background:#fff"></iframe>
+              <?php endif; ?>
+            </div>
         <?php else: ?>
             <p class="flash flash-error">No payment receipt uploaded.</p>
         <?php endif; ?>

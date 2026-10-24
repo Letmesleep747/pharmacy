@@ -76,6 +76,8 @@ Password for every seeded account: **`password`**
 2. `sql/migrate_reservation.sql` (adds `reserved_qty`, `pickup_by`, and widens the `status` enum)
 3. `sql/payment_method_migration.sql` (adds `payment_method` column to orders)
 4. `sql/migrate_staff_branch.sql` (adds `users.branch_id` and Branch B/C staff accounts)
+5. `sql/payment_receipt_review_migration.sql` (payment receipt columns + notification types)
+6. `sql/migrate_payment_notification_types.sql` (if payment notification types are missing)
 
 ## Apache notes
 
