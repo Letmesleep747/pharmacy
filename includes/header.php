@@ -79,6 +79,7 @@ $notifBadge = static function (int $count): string {
           <a class="<?= nav_active('pages/branches') ?>" href="<?= e(url('pages/branches.php')) ?>">Branches</a>
           <a class="<?= nav_active('pages/cart') ?>" href="<?= e(url('pages/cart.php')) ?>">Cart (<?= (int) cart_count() ?>)</a>
           <?php if ($user): ?>
+            <a class="<?= nav_active('pages/orders') ?>" href="<?= e(url('pages/orders.php')) ?>">Orders</a>
             <a class="<?= nav_active('pages/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>
             <span class="nav-user"><?= e($user['name']) ?></span>
             <a href="<?= e(url('pages/logout.php')) ?>">Sign out</a>
@@ -91,6 +92,7 @@ $notifBadge = static function (int $count): string {
           <a class="<?= nav_active('staff/pos') ?>" href="<?= e(url('staff/pos.php')) ?>">POS</a>
           <a class="<?= nav_active('staff/approvals') ?>" href="<?= e(url('staff/approvals.php')) ?>">Rx approvals</a>
           <a class="<?= nav_active('staff/pickups') ?>" href="<?= e(url('staff/pickups.php')) ?>">Pickups</a>
+          <a class="<?= nav_active('staff/orders') ?>" href="<?= e(url('staff/orders.php')) ?>">Orders</a>
           <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Stock</a>
           <?php if ($user): ?>
             <a class="<?= nav_active('staff/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>
@@ -104,6 +106,7 @@ $notifBadge = static function (int $count): string {
           <a class="<?= nav_active('admin/products') ?>" href="<?= e(url('admin/products.php')) ?>">Catalogue</a>
           <a class="<?= nav_active('admin/approvals') ?>" href="<?= e(url('admin/approvals.php')) ?>">Rx approvals</a>
           <a class="<?= nav_active('admin/pickups') ?>" href="<?= e(url('admin/pickups.php')) ?>">Pickups</a>
+          <a class="<?= nav_active('admin/orders') ?>" href="<?= e(url('admin/orders.php')) ?>">Orders</a>
           <a class="<?= nav_active('admin/reports') ?>" href="<?= e(url('admin/reports.php')) ?>">Reports</a>
           <?php if ($user): ?>
             <a class="<?= nav_active('admin/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>

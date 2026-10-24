@@ -18,12 +18,20 @@ function report_dates(): array
     return [$from, $to];
 }
 
+/**
+ * Statuses that count toward sales figures (paid / active pickup pipeline).
+ * Rejected and expired are excluded.
+ */
+function sales_status_sql(): string
+{
+    return "status IN ('completed','ready_for_pickup','approved','pending_approval')";
+}
+
 function sales_summary(mysqli $db, string $from, string $to, int $branchId = 0): array
 {
-    // Exclude pending/rejected Rx orders from revenue until approved
     $sql = 'SELECT COUNT(*) AS transactions, COALESCE(SUM(total),0) AS revenue, COALESCE(SUM(discount_total),0) AS discounts
             FROM orders WHERE DATE(created_at) BETWEEN ? AND ?
-              AND status = \'completed\'';
+              AND ' . sales_status_sql();
     $types = 'ss';
     $params = [$from, $to];
     if ($branchId > 0) {
@@ -38,7 +46,7 @@ function sales_by_day(mysqli $db, string $from, string $to, int $branchId = 0): 
 {
     $sql = 'SELECT DATE(created_at) AS d, SUM(total) AS revenue, COUNT(*) AS n
             FROM orders WHERE DATE(created_at) BETWEEN ? AND ?
-              AND status = \'completed\'
+              AND ' . sales_status_sql() . '
             ' . ($branchId > 0 ? ' AND branch_id = ?' : '') . '
             GROUP BY DATE(created_at) ORDER BY d';
     $types = $branchId > 0 ? 'ssi' : 'ss';
@@ -54,7 +62,7 @@ function sales_by_branch(mysqli $db, string $from, string $to): array
          FROM branches b
          LEFT JOIN orders o ON o.branch_id = b.id
            AND DATE(o.created_at) BETWEEN ? AND ?
-           AND o.status = \'completed\'
+           AND ' . sales_status_sql() . '
          GROUP BY b.id, b.name
          ORDER BY revenue DESC',
         'ss',
@@ -71,7 +79,7 @@ function best_sellers(mysqli $db, string $from, string $to, int $branchId = 0, i
             INNER JOIN orders o ON o.id = oi.order_id
             INNER JOIN products p ON p.id = oi.product_id
             WHERE DATE(o.created_at) BETWEEN ? AND ?
-              AND o.status = \'completed\'';
+              AND ' . sales_status_sql();
     $types = 'ss';
     $params = [$from, $to];
     if ($branchId > 0) {
@@ -80,6 +88,55 @@ function best_sellers(mysqli $db, string $from, string $to, int $branchId = 0, i
         $params[] = $branchId;
     }
     $sql .= ' GROUP BY p.id, p.name, p.sku ORDER BY qty_sold DESC LIMIT ' . (int) $limit;
+    return db_all($db, $sql, $types, $params);
+}
+
+/**
+ * Order history list with optional filters.
+ * @return list<array<string,mixed>>
+ */
+function orders_history(
+    mysqli $db,
+    string $from,
+    string $to,
+    int $branchId = 0,
+    int $userId = 0,
+    string $status = '',
+    string $source = '',
+    int $limit = 200
+): array {
+    $sql = 'SELECT o.id, o.created_at, o.source, o.status, o.total, o.discount_total, o.pickup_by,
+                   b.name AS branch_name, u.name AS customer_name, u.email AS customer_email
+            FROM orders o
+            INNER JOIN branches b ON b.id = o.branch_id
+            LEFT JOIN users u ON u.id = o.user_id
+            WHERE DATE(o.created_at) BETWEEN ? AND ?';
+    $types = 'ss';
+    $params = [$from, $to];
+
+    if ($branchId > 0) {
+        $sql .= ' AND o.branch_id = ?';
+        $types .= 'i';
+        $params[] = $branchId;
+    }
+    if ($userId > 0) {
+        $sql .= ' AND o.user_id = ?';
+        $types .= 'i';
+        $params[] = $userId;
+    }
+    if ($status !== '' && $status !== 'all') {
+        $sql .= ' AND o.status = ?';
+        $types .= 's';
+        $params[] = $status;
+    }
+    if ($source !== '' && $source !== 'all') {
+        $sql .= ' AND o.source = ?';
+        $types .= 's';
+        $params[] = $source;
+    }
+
+    $limit = max(1, min(500, $limit));
+    $sql .= ' ORDER BY o.created_at DESC, o.id DESC LIMIT ' . $limit;
     return db_all($db, $sql, $types, $params);
 }
 

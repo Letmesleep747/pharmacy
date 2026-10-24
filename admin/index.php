@@ -8,11 +8,26 @@ require_admin_portal();
 
 $db = db();
 [$from, $to] = report_dates();
-$summary = sales_summary($db, $from, $to);
-$byDay = sales_by_day($db, $from, $to);
-$byBranch = sales_by_branch($db, $from, $to);
-$best = best_sellers($db, $from, $to, 0, 8);
-$low = low_stock_rows($db);
+$branchId = get_int('branch');
+$branches = all_branches($db, false);
+
+$summary = sales_summary($db, $from, $to, $branchId);
+$byDay = sales_by_day($db, $from, $to, $branchId);
+$byBranch = $branchId > 0
+    ? sales_by_branch($db, $from, $to) // still show comparison; highlight filter in copy
+    : sales_by_branch($db, $from, $to);
+$best = best_sellers($db, $from, $to, $branchId, 8);
+$low = low_stock_rows($db, $branchId);
+
+$branchLabel = 'All branches';
+if ($branchId > 0) {
+    foreach ($branches as $b) {
+        if ((int) $b['id'] === $branchId) {
+            $branchLabel = (string) $b['name'];
+            break;
+        }
+    }
+}
 
 $title = 'Dashboard';
 require dirname(__DIR__) . '/includes/header.php';
@@ -21,12 +36,24 @@ require dirname(__DIR__) . '/includes/header.php';
   <?php require dirname(__DIR__) . '/includes/admin_nav.php'; ?>
   <div>
     <h1>Analytics dashboard</h1>
-    <p class="muted">Figures are calculated from stored orders, order items and branch stock — not placeholder numbers.</p>
+    <p class="muted">Sales include completed, ready-for-pickup, approved, and pending-approval orders (not rejected/expired). Filter by branch to compare counters.</p>
     <form class="filters" method="get">
       <label>From <input type="date" name="from" value="<?= e($from) ?>"></label>
       <label>To <input type="date" name="to" value="<?= e($to) ?>"></label>
+      <label>Branch
+        <select name="branch">
+          <option value="0">All branches</option>
+          <?php foreach ($branches as $branch): ?>
+            <option value="<?= (int) $branch['id'] ?>" <?= $branchId === (int) $branch['id'] ? 'selected' : '' ?>>
+              <?= e($branch['name']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </label>
       <button class="btn" type="submit">Apply</button>
+      <a class="btn btn-secondary" href="<?= e(url('admin/index.php')) ?>">Reset</a>
     </form>
+    <p class="muted" style="margin-top:0">Showing: <strong><?= e($branchLabel) ?></strong> · <?= e($from) ?> → <?= e($to) ?></p>
     <div class="cards">
       <div class="card stat"><span class="muted">Total sales</span><strong><?= e(money((float) $summary['revenue'])) ?></strong></div>
       <div class="card stat"><span class="muted">Transactions</span><strong><?= (int) $summary['transactions'] ?></strong></div>
@@ -35,7 +62,7 @@ require dirname(__DIR__) . '/includes/header.php';
     </div>
     <div class="grid-2" style="margin-top:20px">
       <div class="chart-box">
-        <h2>Sales trend</h2>
+        <h2>Sales trend<?= $branchId > 0 ? ' (' . e($branchLabel) . ')' : '' ?></h2>
         <canvas id="salesChart" height="160"></canvas>
       </div>
       <div class="chart-box">

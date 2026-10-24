@@ -89,6 +89,7 @@ $query = http_build_query(['type' => $type, 'from' => $from, 'to' => $to, 'branc
         <?php endforeach; ?>
       </select>
       <button class="btn" type="submit">Run</button>
+      <a class="btn btn-secondary" href="<?= e(url('admin/reports.php')) ?>">Reset</a>
       <a class="btn btn-secondary" href="<?= e(url('admin/reports.php?' . $query . '&format=csv')) ?>">Download CSV</a>
       <button class="btn btn-secondary" type="button" onclick="window.print()">Print / PDF</button>
     </form>
