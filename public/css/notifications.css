@@ -1,0 +1,158 @@
+/* Live notification / action toasts — top-right macOS-style panels */
+.notif-toast-root {
+  position: fixed !important;
+  top: 18px !important;
+  right: 18px !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 2147483000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: min(360px, calc(100vw - 28px)) !important;
+  max-width: min(360px, calc(100vw - 28px)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.notif-toast {
+  pointer-events: auto !important;
+  display: grid !important;
+  grid-template-columns: 44px 1fr !important;
+  gap: 10px 12px !important;
+  align-items: start !important;
+  padding: 12px 14px !important;
+  margin: 0 !important;
+  border-radius: 18px !important;
+  color: #f5f5f7 !important;
+  background: rgba(40, 40, 42, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32) !important;
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  cursor: pointer;
+  animation: notif-slide-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.notif-toast-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  color: #fff !important;
+  background: linear-gradient(160deg, #2a9d8f, #1d6f66) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.notif-toast-body { min-width: 0 !important; }
+
+.notif-toast-top {
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin: 0 0 2px !important;
+}
+
+.notif-toast-top strong {
+  font-family: "IBM Plex Sans", system-ui, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  color: #fff !important;
+  margin: 0 !important;
+}
+
+.notif-toast-time,
+.notif-toast-dismiss {
+  flex-shrink: 0 !important;
+  font-size: 11px !important;
+  color: rgba(245, 245, 247, 0.55) !important;
+}
+
+.notif-toast-dismiss {
+  appearance: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  padding: 0 2px !important;
+  color: rgba(245, 245, 247, 0.55) !important;
+}
+
+.notif-toast-dismiss:hover { color: #fff !important; }
+
+.notif-toast-body p {
+  margin: 0 !important;
+  font-family: "IBM Plex Sans", system-ui, sans-serif !important;
+  font-size: 12.5px !important;
+  line-height: 1.35 !important;
+  color: rgba(245, 245, 247, 0.88) !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notif-toast-actions {
+  grid-column: 2 !important;
+  display: flex !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+}
+
+.notif-toast-actions button,
+.notif-toast-actions a {
+  appearance: none !important;
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+  font: inherit !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 5px 10px !important;
+  border-radius: 999px !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  width: auto !important;
+  box-shadow: none !important;
+}
+
+.notif-toast-actions button:hover,
+.notif-toast-actions a:hover {
+  background: rgba(255, 255, 255, 0.24) !important;
+}
+
+.notif-toast.is-success .notif-toast-icon {
+  background: linear-gradient(160deg, #34d399, #059669) !important;
+}
+.notif-toast.is-error .notif-toast-icon {
+  background: linear-gradient(160deg, #fb7185, #e11d48) !important;
+}
+.notif-toast.is-info .notif-toast-icon {
+  background: linear-gradient(160deg, #38bdf8, #0284c7) !important;
+}
+
+@keyframes notif-slide-in {
+  from { opacity: 0; transform: translateX(28px) scale(0.98); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@media (max-width: 840px) {
+  .notif-toast-root {
+    top: 12px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}

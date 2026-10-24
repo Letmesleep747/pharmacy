@@ -8,5 +8,13 @@
   <a class="<?= nav_active('staff/payment-approvals') ?>" href="<?= e(url('staff/payment-approvals.php')) ?>">Payment receipts</a>
   <a class="<?= nav_active('staff/pickups') ?>" href="<?= e(url('staff/pickups.php')) ?>">Pickups</a>
   <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Branch stock</a>
-  <a class="<?= nav_active('staff/notifications') ?>" href="<?= e(url('staff/notifications.php')) ?>">Notifications</a>
+  <a class="<?= nav_active('staff/notifications') ?>" href="<?= e(url('staff/notifications.php')) ?>">Notifications<?php
+    try {
+      $n = unread_notification_count(db());
+      if ($n > 0) {
+          echo ' <span class="nav-badge" data-notif-badge>' . e($n > 99 ? '99+' : (string) $n) . '</span>';
+      }
+    } catch (Throwable $e) {
+    }
+  ?></a>
 </nav>

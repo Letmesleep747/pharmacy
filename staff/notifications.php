@@ -41,7 +41,12 @@ require dirname(__DIR__) . '/includes/header.php';
                                 <td><?= e($n['message']) ?></td>
                                 <td style="white-space:nowrap;">
                                     <?php if (!$n['is_read']): ?>
-                                        <a href="?read=<?= (int)$n['id'] ?>" class="btn btn-small btn-secondary" style="margin-bottom:4px;">Mark read</a>
+                                        <form method="post" style="display:inline">
+                                          <?= csrf_field() ?>
+                                          <input type="hidden" name="action" value="mark_read">
+                                          <input type="hidden" name="notification_id" value="<?= (int) $n['id'] ?>">
+                                          <button class="btn btn-small btn-secondary" type="submit" style="margin-bottom:4px;">Mark read</button>
+                                        </form>
                                     <?php endif; ?>
                                     
                                     <?php if ($n['order_id']): ?>

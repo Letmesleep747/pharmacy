@@ -13,6 +13,10 @@
       }) ?></p>
     </div>
   </footer>
-  <script src="<?= e(url('public/js/main.js')) ?>"></script>
+  <div id="notif-toast-root" class="notif-toast-root" aria-live="polite" aria-relevant="additions"></div>
+  <script src="<?= e(url('public/js/main.js')) ?>?v=<?= (int) @filemtime(dirname(__DIR__) . '/public/js/main.js') ?>"></script>
+  <?php if (current_user()): ?>
+    <script src="<?= e(url('public/js/notifications.js')) ?>?v=<?= (int) @filemtime(dirname(__DIR__) . '/public/js/notifications.js') ?>"></script>
+  <?php endif; ?>
 </body>
 </html>

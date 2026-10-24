@@ -10,5 +10,13 @@
   <a class="<?= nav_active('admin/payment-approvals') ?>" href="<?= e(url('admin/payment-approvals.php')) ?>">Payment receipts</a>
   <a class="<?= nav_active('admin/pickups') ?>" href="<?= e(url('admin/pickups.php')) ?>">Pickups</a>
   <a class="<?= nav_active('admin/reports') ?>" href="<?= e(url('admin/reports.php')) ?>">Reports</a>
-  <a class="<?= nav_active('admin/notifications') ?>" href="<?= e(url('admin/notifications.php')) ?>">Notifications</a>
+  <a class="<?= nav_active('admin/notifications') ?>" href="<?= e(url('admin/notifications.php')) ?>">Notifications<?php
+    try {
+      $n = unread_notification_count(db());
+      if ($n > 0) {
+          echo ' <span class="nav-badge" data-notif-badge>' . e($n > 99 ? '99+' : (string) $n) . '</span>';
+      }
+    } catch (Throwable $e) {
+    }
+  ?></a>
 </nav>

@@ -14,6 +14,26 @@ $brandTag = match ($portal) {
     'staff' => 'Staff counter',
     default => 'Online pharmacy',
 };
+$notifUnread = 0;
+$notifHref = match ($portal) {
+    'admin' => url('admin/notifications.php'),
+    'staff' => url('staff/notifications.php'),
+    default => url('pages/notifications.php'),
+};
+if ($user) {
+    try {
+        $notifUnread = unread_notification_count(db(), (int) $user['id']);
+    } catch (Throwable $e) {
+        $notifUnread = 0;
+    }
+}
+$notifBadge = static function (int $count): string {
+    if ($count <= 0) {
+        return '';
+    }
+    $label = $count > 99 ? '99+' : (string) $count;
+    return ' <span class="nav-badge" data-notif-badge>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>';
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -21,10 +41,23 @@ $brandTag = match ($portal) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($pageTitle) ?></title>
+  <?php if ($user): ?>
+    <?php
+      $notifApi = match ($portal) {
+          'admin' => url('admin/notifications-api.php'),
+          'staff' => url('staff/notifications-api.php'),
+          default => url('api/notifications.php'),
+      };
+    ?>
+    <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
+    <meta name="notif-api" content="<?= e($notifApi) ?>">
+    <meta name="notif-list" content="<?= e($notifHref) ?>">
+  <?php endif; ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,650&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= e(url('public/css/style.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('public/css/style.css')) ?>?v=<?= (int) @filemtime(dirname(__DIR__) . '/public/css/style.css') ?>">
+  <link rel="stylesheet" href="<?= e(url('public/css/notifications.css')) ?>?v=<?= (int) @filemtime(dirname(__DIR__) . '/public/css/notifications.css') ?>">
 </head>
 <body class="portal-<?= e($portal) ?>">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -45,8 +78,8 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('pages/promotions') ?>" href="<?= e(url('pages/promotions.php')) ?>">Promotions</a>
           <a class="<?= nav_active('pages/branches') ?>" href="<?= e(url('pages/branches.php')) ?>">Branches</a>
           <a class="<?= nav_active('pages/cart') ?>" href="<?= e(url('pages/cart.php')) ?>">Cart (<?= (int) cart_count() ?>)</a>
-          <a class="<?= nav_active('pages/notifications') ?>" href="<?= e(url('pages/notifications.php')) ?>">Notifications</a>
           <?php if ($user): ?>
+            <a class="<?= nav_active('pages/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>
             <span class="nav-user"><?= e($user['name']) ?></span>
             <a href="<?= e(url('pages/logout.php')) ?>">Sign out</a>
           <?php else: ?>
@@ -59,8 +92,8 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('staff/approvals') ?>" href="<?= e(url('staff/approvals.php')) ?>">Rx approvals</a>
           <a class="<?= nav_active('staff/pickups') ?>" href="<?= e(url('staff/pickups.php')) ?>">Pickups</a>
           <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Stock</a>
-          <a class="<?= nav_active('staff/notifications') ?>" href="<?= e(url('staff/notifications.php')) ?>">Notifications</a>
           <?php if ($user): ?>
+            <a class="<?= nav_active('staff/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>
             <span class="nav-user"><?= e($user['name']) ?><?php if (!empty($user['branch_name'])): ?> · <?= e((string) $user['branch_name']) ?><?php endif; ?></span>
             <a href="<?= e(url('staff/logout.php')) ?>">Sign out</a>
           <?php else: ?>
@@ -72,8 +105,8 @@ $brandTag = match ($portal) {
           <a class="<?= nav_active('admin/approvals') ?>" href="<?= e(url('admin/approvals.php')) ?>">Rx approvals</a>
           <a class="<?= nav_active('admin/pickups') ?>" href="<?= e(url('admin/pickups.php')) ?>">Pickups</a>
           <a class="<?= nav_active('admin/reports') ?>" href="<?= e(url('admin/reports.php')) ?>">Reports</a>
-          <a class="<?= nav_active('admin/notifications') ?>" href="<?= e(url('admin/notifications.php')) ?>">Notifications</a>
           <?php if ($user): ?>
+            <a class="<?= nav_active('admin/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>
             <span class="nav-user"><?= e($user['name']) ?></span>
             <a href="<?= e(url('admin/logout.php')) ?>">Sign out</a>
           <?php else: ?>
@@ -83,9 +116,16 @@ $brandTag = match ($portal) {
       </nav>
     </div>
   </header>
+  <?php if ($flash): ?>
+    <script type="application/json" id="action-toast-data"><?= json_encode([
+        'type' => (string) ($flash['type'] ?? 'info'),
+        'message' => (string) ($flash['message'] ?? ''),
+        'title' => match ((string) ($flash['type'] ?? 'info')) {
+            'success' => 'Success',
+            'error' => 'Something went wrong',
+            'info' => 'Update',
+            default => 'Notice',
+        },
+    ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS) ?></script>
+  <?php endif; ?>
   <main id="main">
-    <?php if ($flash): ?>
-      <div class="container">
-        <p class="flash flash-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></p>
-      </div>
-    <?php endif; ?>

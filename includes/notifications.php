@@ -1,4 +1,41 @@
 <?php
+/** Unread notification count for the signed-in (or given) user. */
+function unread_notification_count(mysqli $db, ?int $userId = null): int
+{
+    $userId = $userId ?? (int) (current_user()['id'] ?? 0);
+    if ($userId <= 0) {
+        return 0;
+    }
+    $row = db_one(
+        $db,
+        'SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND is_read = 0',
+        'i',
+        [$userId]
+    );
+    return (int) ($row['n'] ?? 0);
+}
+
+/** Recent unread rows for badges / live toast (newest first). */
+function recent_unread_notifications(mysqli $db, int $userId, int $limit = 8, int $afterId = 0): array
+{
+    if ($userId <= 0) {
+        return [];
+    }
+    $limit = max(1, min(20, $limit));
+    $sql = 'SELECT id, order_id, type, title, message, created_at
+            FROM notifications
+            WHERE user_id = ? AND is_read = 0';
+    $types = 'i';
+    $params = [$userId];
+    if ($afterId > 0) {
+        $sql .= ' AND id > ?';
+        $types .= 'i';
+        $params[] = $afterId;
+    }
+    $sql .= ' ORDER BY id DESC LIMIT ' . $limit;
+    return db_all($db, $sql, $types, $params);
+}
+
 /** Call only after the associated order change has succeeded. */
 function notify_prescription_submitted(mysqli $db, int $orderId): void {
     $order = db_one($db, 'SELECT id, branch_id, status FROM orders WHERE id = ?', 'i', [$orderId]);
