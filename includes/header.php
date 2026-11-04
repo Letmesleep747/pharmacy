@@ -81,15 +81,12 @@ $notifBadge = static function (int $count): string {
           <?php if ($user): ?>
             <a class="<?= nav_active('pages/orders') ?>" href="<?= e(url('pages/orders.php')) ?>">Orders</a>
             <a class="<?= nav_active('pages/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>
-            <span class="nav-user"><?= e($user['name']) ?></span>
+            <a class="nav-user <?= nav_active('pages/profile') ?>" href="<?= e(url('pages/profile.php')) ?>"><?= e($user['name']) ?></a>
             <a href="<?= e(url('pages/logout.php')) ?>">Sign out</a>
-          <?php if ($user): ?>
-          <a class="nav-user <?= nav_active('pages/profile') ?>"href="<?= e(url('pages/profile.php')) ?>"><?= e($user['name']) ?></a>
-          <a href="<?= e(url('pages/logout.php')) ?>">Sign out</a>
           <?php else: ?>
-          <a class="<?= nav_active('pages/login') ?>"href="<?= e(url('pages/login.php')) ?>">Sign in</a>
-          <a class="btn btn-small"href="<?= e(url('pages/register.php')) ?>">Register</a>
-        <?php endif; ?>
+            <a class="<?= nav_active('pages/login') ?>" href="<?= e(url('pages/login.php')) ?>">Sign in</a>
+            <a class="btn btn-small" href="<?= e(url('pages/register.php')) ?>">Register</a>
+          <?php endif; ?>
         <?php elseif ($portal === 'staff'): ?>
           <a class="<?= nav_active('staff/index') ?>" href="<?= e(url('staff/index.php')) ?>">Counter</a>
           <a class="<?= nav_active('staff/pos') ?>" href="<?= e(url('staff/pos.php')) ?>">POS</a>
