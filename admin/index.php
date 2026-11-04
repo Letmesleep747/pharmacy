@@ -37,6 +37,13 @@ require dirname(__DIR__) . '/includes/header.php';
   <div>
     <h1>Analytics dashboard</h1>
     <p class="muted">Sales include completed, ready-for-pickup, approved, and pending-approval orders (not rejected/expired). Filter by branch to compare counters.</p>
+    <?php if ($low): ?>
+      <p class="flash flash-error">
+        Low-stock alert: <?= count($low) ?> product line(s) at or below reorder level
+        <?= $branchId > 0 ? ' for ' . e($branchLabel) : ' across branches' ?>.
+        <a href="<?= e(url('admin/stock.php?low=1' . ($branchId > 0 ? '&branch=' . $branchId : ''))) ?>">Review low stock</a>
+      </p>
+    <?php endif; ?>
     <form class="filters" method="get">
       <label>From <input type="date" name="from" value="<?= e($from) ?>"></label>
       <label>To <input type="date" name="to" value="<?= e($to) ?>"></label>

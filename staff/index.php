@@ -30,6 +30,12 @@ require dirname(__DIR__) . '/includes/header.php';
   <div>
     <h1>Staff counter</h1>
     <p class="muted">Working at <strong><?= e($branchName) ?></strong>. Sales figures are for this branch only.</p>
+    <?php if ($low): ?>
+      <p class="flash flash-error">
+        Low-stock alert: <?= count($low) ?> product line(s) at or below reorder level.
+        <a href="<?= e(url('staff/stock.php?low=1')) ?>">Review low stock</a>
+      </p>
+    <?php endif; ?>
 
     <form class="filters" method="get">
       <label>From <input type="date" name="from" value="<?= e($from) ?>"></label>

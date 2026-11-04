@@ -35,6 +35,7 @@ csrf_verify();
 
 try {
     expire_overdue_orders(db());
+    ensure_cancelled_order_status(db());
 } catch (Throwable $e) {
     // Ignore when an older database is missing reservation columns.
 }

@@ -15,12 +15,13 @@ $db = db();
 $userId = (int) current_user()['id'];
 [$from, $to] = report_dates();
 $status = trim((string) ($_GET['status'] ?? 'all'));
-$allowedStatus = ['all', 'pending_approval', 'ready_for_pickup', 'approved', 'completed', 'rejected', 'expired'];
+$q = trim((string) ($_GET['q'] ?? ''));
+$allowedStatus = ['all', 'pending_approval', 'ready_for_pickup', 'approved', 'completed', 'rejected', 'cancelled', 'expired'];
 if (!in_array($status, $allowedStatus, true)) {
     $status = 'all';
 }
 
-$orders = orders_history($db, $from, $to, 0, $userId, $status === 'all' ? '' : $status);
+$orders = orders_history($db, $from, $to, 0, $userId, $status === 'all' ? '' : $status, '', 200, $q);
 
 $title = 'Order history';
 require dirname(__DIR__) . '/includes/header.php';
@@ -41,6 +42,9 @@ require dirname(__DIR__) . '/includes/header.php';
             </option>
           <?php endforeach; ?>
         </select>
+      </label>
+      <label>Search
+        <input type="search" name="q" value="<?= e($q) ?>" placeholder="Order # or branch">
       </label>
       <button class="btn" type="submit">Apply</button>
       <a class="btn btn-secondary" href="<?= e(url('pages/orders.php')) ?>">Reset</a>

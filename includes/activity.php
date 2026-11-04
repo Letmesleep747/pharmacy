@@ -128,5 +128,7 @@ function activity_action_labels(): array
         'staff_password_reset' => 'Staff password reset',
         'promotion_created' => 'Promotion created',
         'promotion_updated' => 'Promotion updated',
+        'order_cancelled' => 'Order cancelled',
+        'password_changed' => 'Password changed',
     ];
 }

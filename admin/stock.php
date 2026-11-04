@@ -4,6 +4,8 @@ require_admin_portal();
 
 $db = db();
 $branchId = get_int('branch');
+$q = trim((string) ($_GET['q'] ?? ''));
+$lowOnly = (string) ($_GET['low'] ?? '') === '1';
 
 if (is_post()) {
     $quantities = $_POST['quantity'] ?? [];
@@ -20,7 +22,7 @@ if (is_post()) {
             if ($b <= 0 || $p <= 0) {
                 continue;
             }
-            $q = max(0, (int) $qty);
+            $qtyVal = max(0, (int) $qty);
             $r = max(0, (int) ($reorders[$key] ?? 0));
             db_exec(
                 $db,
@@ -28,7 +30,7 @@ if (is_post()) {
                  VALUES (?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), reorder_level = VALUES(reorder_level)',
                 'iiii',
-                [$b, $p, $q, $r]
+                [$b, $p, $qtyVal, $r]
             )->close();
             $changed++;
             $touchedBranches[$b] = true;
@@ -40,13 +42,24 @@ if (is_post()) {
                 'branches' => array_map('intval', array_keys($touchedBranches)),
             ],
         ]);
+        $redirect = 'admin/stock.php';
+        $qs = [];
+        if ($branchId > 0) {
+            $qs[] = 'branch=' . $branchId;
+        }
+        if ($lowOnly) {
+            $qs[] = 'low=1';
+        }
+        if ($q !== '') {
+            $qs[] = 'q=' . rawurlencode($q);
+        }
         flash_set('success', 'Stock levels saved.');
-        redirect('admin/stock.php' . ($branchId ? ('?branch=' . $branchId) : ''));
+        redirect($redirect . ($qs ? ('?' . implode('&', $qs)) : ''));
     }
 }
 
 $branches = all_branches($db, false);
-$rows = inventory_rows($db, $branchId);
+$rows = inventory_rows($db, $branchId, $q, $lowOnly);
 
 $title = 'Branch stock';
 require dirname(__DIR__) . '/includes/header.php';
@@ -57,13 +70,16 @@ require dirname(__DIR__) . '/includes/header.php';
     <h1>Branch stock</h1>
     <p class="muted">On-hand quantity is stored per branch. Available = quantity − reserved (held for pickup orders). Low stock uses available stock.</p>
     <form class="filters" method="get">
-      <select name="branch">
+      <select name="branch" aria-label="Branch">
         <option value="0">All branches</option>
         <?php foreach ($branches as $branch): ?>
           <option value="<?= (int) $branch['id'] ?>" <?= $branchId === (int) $branch['id'] ? 'selected' : '' ?>><?= e($branch['name']) ?></option>
         <?php endforeach; ?>
       </select>
+      <input type="search" name="q" value="<?= e($q) ?>" placeholder="Search product, SKU, or branch" aria-label="Search">
+      <label class="check"><input type="checkbox" name="low" value="1" <?= $lowOnly ? 'checked' : '' ?>> Low stock only</label>
       <button class="btn btn-secondary" type="submit">Filter</button>
+      <a class="btn btn-secondary" href="<?= e(url('admin/stock.php')) ?>">Reset</a>
     </form>
     <form method="post">
       <?= csrf_field() ?>
@@ -71,6 +87,9 @@ require dirname(__DIR__) . '/includes/header.php';
         <table>
           <thead><tr><th>Branch</th><th>Product</th><th>SKU</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder level</th></tr></thead>
           <tbody>
+            <?php if (!$rows): ?>
+              <tr><td colspan="7">No stock rows match this filter.</td></tr>
+            <?php endif; ?>
             <?php foreach ($rows as $row):
                 $key = (int) $row['branch_id'] . '_' . (int) $row['product_id'];
                 $available = (int) ($row['available'] ?? max(0, (int) $row['quantity'] - (int) ($row['reserved_qty'] ?? 0)));

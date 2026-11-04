@@ -580,8 +580,130 @@ function order_status_label(string $status): string
         'approved' => 'Approved — ready for pickup',
         'ready_for_pickup' => 'Ready for pickup',
         'rejected' => 'Rejected',
+        'cancelled' => 'Cancelled',
         'completed' => 'Completed',
         'expired' => 'Expired — not collected',
         default => $status,
     };
+}
+
+/** Ensure cancelled is allowed on older databases that still use the previous enum. */
+function ensure_cancelled_order_status(mysqli $db): void
+{
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
+    try {
+        $db->query(
+            "ALTER TABLE orders
+             MODIFY COLUMN status ENUM(
+               'pending_approval','approved','rejected','cancelled',
+               'ready_for_pickup','completed','expired'
+             ) NOT NULL DEFAULT 'completed'"
+        );
+    } catch (Throwable $e) {
+        // Already applied or table missing — ignore.
+    }
+    $ready = true;
+}
+
+/**
+ * Customer cancels an uncollected online order and releases reserved stock.
+ */
+function cancel_customer_order(mysqli $db, int $orderId, int $customerId): void
+{
+    ensure_cancelled_order_status($db);
+    $db->begin_transaction();
+    try {
+        $order = db_one($db, 'SELECT * FROM orders WHERE id = ? FOR UPDATE', 'i', [$orderId]);
+        if (!$order || (int) ($order['user_id'] ?? 0) !== $customerId) {
+            throw new RuntimeException('Order not found.');
+        }
+        if ($order['source'] !== 'online') {
+            throw new RuntimeException('Only online pickup orders can be cancelled here.');
+        }
+        $cancellable = ['pending_approval', 'approved', 'ready_for_pickup'];
+        if (!in_array($order['status'], $cancellable, true)) {
+            throw new RuntimeException('This order can no longer be cancelled.');
+        }
+
+        release_order_reservation($db, $order);
+        db_exec(
+            $db,
+            "UPDATE orders
+             SET status = 'cancelled',
+                 review_note = ?,
+                 reviewed_at = NOW(),
+                 payment_status = CASE
+                   WHEN payment_status = 'pending_review' THEN 'rejected'
+                   ELSE payment_status
+                 END
+             WHERE id = ?",
+            'si',
+            ['Cancelled by customer.', $orderId]
+        )->close();
+        $db->commit();
+
+        log_activity($db, 'order_cancelled', 'Customer cancelled order #' . $orderId, [
+            'entity_type' => 'order',
+            'entity_id' => $orderId,
+            'branch_id' => (int) $order['branch_id'],
+            'details' => ['previous_status' => $order['status']],
+        ]);
+    } catch (Throwable $e) {
+        $db->rollback();
+        throw $e;
+    }
+}
+
+/** Payment / Rx notes and reservation messages for order detail pages. */
+function order_status_messages(array $order): array
+{
+    $status = (string) ($order['status'] ?? '');
+    $messages = [];
+    $reviewNote = trim((string) ($order['review_note'] ?? ''));
+    $paymentNote = trim((string) ($order['payment_review_note'] ?? ''));
+    $paymentStatus = (string) ($order['payment_status'] ?? '');
+
+    if ($status === 'pending_approval') {
+        $messages[] = ['type' => 'info', 'text' => 'Prescription is with the pharmacy team. Stock is reserved at the pickup branch.'];
+    } elseif ($status === 'ready_for_pickup' || $status === 'approved') {
+        $messages[] = ['type' => 'ok', 'text' => 'Order is ready for collection. Bring your order number when you pick up.'];
+    } elseif ($status === 'expired') {
+        $messages[] = [
+            'type' => 'error',
+            'text' => 'This order expired because it was not collected in time. Reserved stock has been released'
+                . ($reviewNote !== '' ? ': ' . $reviewNote : '.'),
+        ];
+    } elseif ($status === 'rejected') {
+        $messages[] = [
+            'type' => 'error',
+            'text' => 'This order was rejected'
+                . ($reviewNote !== '' ? ': ' . $reviewNote : '.')
+                . ' Reserved stock has been released.',
+        ];
+    } elseif ($status === 'cancelled') {
+        $messages[] = [
+            'type' => 'info',
+            'text' => 'This order was cancelled. Reserved stock has been released'
+                . ($reviewNote !== '' ? ' (' . $reviewNote . ')' : '.'),
+        ];
+    } elseif ($status === 'completed') {
+        $messages[] = ['type' => 'ok', 'text' => 'Order collected and completed.'];
+    }
+
+    if ($paymentStatus === 'pending_review') {
+        $messages[] = ['type' => 'info', 'text' => 'Payment receipt is waiting for staff review.'];
+    } elseif ($paymentStatus === 'rejected' || $paymentStatus === 'refunded') {
+        $messages[] = [
+            'type' => 'error',
+            'text' => 'Payment was ' . $paymentStatus
+                . ($paymentNote !== '' ? ': ' . $paymentNote : '.'),
+        ];
+    } elseif ($paymentStatus === 'approved' && $paymentNote !== '') {
+        $messages[] = ['type' => 'ok', 'text' => 'Payment note: ' . $paymentNote];
+    }
+
+    return $messages;
 }

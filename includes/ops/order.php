@@ -46,6 +46,8 @@ $items = db_all(
 
 $status = (string) ($order['status'] ?? 'completed');
 $canCollect = in_array($status, ['ready_for_pickup', 'approved'], true);
+$messages = order_status_messages($order);
+$receiptPath = current_portal() === 'admin' ? 'admin/receipt.php?id=' : 'staff/receipt.php?id=';
 
 $title = 'Sale #' . $id;
 require dirname(__DIR__) . '/header.php';
@@ -54,7 +56,12 @@ require dirname(__DIR__) . '/header.php';
   <?php require dirname(__DIR__) . '/' . ops_nav_file() . '.php'; ?>
   <div>
     <h1>Order #<?= (int) $order['id'] ?></h1>
-    <p><span class="badge"><?= e(order_status_label($status)) ?></span></p>
+    <p>
+      <span class="badge"><?= e(order_status_label($status)) ?></span>
+      <?php if (!empty($order['payment_status'])): ?>
+        <span class="badge">Payment: <?= e((string) $order['payment_status']) ?></span>
+      <?php endif; ?>
+    </p>
     <p>Branch <strong><?= e($order['branch_name']) ?></strong> — <?= e($order['address']) ?></p>
     <p class="muted">
       <?= e($order['source']) ?> · <?= e($order['created_at']) ?> · Total <?= e(money((float) $order['total'])) ?>
@@ -64,6 +71,16 @@ require dirname(__DIR__) . '/header.php';
       <p class="muted">Pickup by <?= e($order['pickup_by']) ?></p>
     <?php endif; ?>
     <?php if ($error): ?><p class="flash flash-error"><?= e($error) ?></p><?php endif; ?>
+    <?php foreach ($messages as $msg): ?>
+      <?php
+        $class = match ($msg['type']) {
+            'error' => 'flash flash-error',
+            'ok' => 'flash flash-success',
+            default => 'flash flash-info',
+        };
+      ?>
+      <p class="<?= e($class) ?>"><?= e($msg['text']) ?></p>
+    <?php endforeach; ?>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Product</th><th>Qty</th><th>Unit</th><th>Discount</th><th>Line</th></tr></thead>
@@ -93,6 +110,7 @@ require dirname(__DIR__) . '/header.php';
           <button class="btn" type="submit">Mark collected</button>
         </form>
       <?php endif; ?>
+      <a class="btn btn-secondary" href="<?= e(url($receiptPath . $id)) ?>">View / print receipt</a>
       <?php if (current_portal() === 'staff'): ?>
         <a class="btn btn-secondary" href="<?= e(url('staff/pos.php')) ?>">New sale</a>
       <?php endif; ?>

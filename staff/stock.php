@@ -5,6 +5,8 @@ require_staff_portal();
 $db = db();
 $branchId = staff_branch_id();
 $branchName = user_branch_name() ?: ('Branch #' . $branchId);
+$q = trim((string) ($_GET['q'] ?? ''));
+$lowOnly = (string) ($_GET['low'] ?? '') === '1';
 
 if (is_post()) {
     $quantities = $_POST['quantity'] ?? [];
@@ -21,7 +23,7 @@ if (is_post()) {
             if ($b !== $branchId || $p <= 0) {
                 continue;
             }
-            $q = max(0, (int) $qty);
+            $qtyVal = max(0, (int) $qty);
             $r = max(0, (int) ($reorders[$key] ?? 0));
             db_exec(
                 $db,
@@ -29,7 +31,7 @@ if (is_post()) {
                  VALUES (?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), reorder_level = VALUES(reorder_level)',
                 'iiii',
-                [$b, $p, $q, $r]
+                [$b, $p, $qtyVal, $r]
             )->close();
             $changed++;
         }
@@ -38,11 +40,11 @@ if (is_post()) {
             'details' => ['rows' => $changed],
         ]);
         flash_set('success', 'Stock levels saved for ' . $branchName . '.');
-        redirect('staff/stock.php');
+        redirect('staff/stock.php' . ($lowOnly ? '?low=1' : '') . ($q !== '' ? ($lowOnly ? '&' : '?') . 'q=' . rawurlencode($q) : ''));
     }
 }
 
-$rows = inventory_rows($db, $branchId);
+$rows = inventory_rows($db, $branchId, $q, $lowOnly);
 
 $title = 'Branch stock';
 require dirname(__DIR__) . '/includes/header.php';
@@ -52,12 +54,21 @@ require dirname(__DIR__) . '/includes/header.php';
   <div>
     <h1>Branch stock</h1>
     <p class="muted">Update on-hand quantities for <strong><?= e($branchName) ?></strong>. Available = quantity − reserved.</p>
+    <form class="filters" method="get">
+      <input type="search" name="q" value="<?= e($q) ?>" placeholder="Search product or SKU" aria-label="Search">
+      <label class="check"><input type="checkbox" name="low" value="1" <?= $lowOnly ? 'checked' : '' ?>> Low stock only</label>
+      <button class="btn btn-secondary" type="submit">Filter</button>
+      <a class="btn btn-secondary" href="<?= e(url('staff/stock.php')) ?>">Reset</a>
+    </form>
     <form method="post">
       <?= csrf_field() ?>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Product</th><th>SKU</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder level</th></tr></thead>
           <tbody>
+            <?php if (!$rows): ?>
+              <tr><td colspan="6">No stock rows match this filter.</td></tr>
+            <?php endif; ?>
             <?php foreach ($rows as $row):
                 $key = (int) $row['branch_id'] . '_' . (int) $row['product_id'];
                 $available = (int) ($row['available'] ?? max(0, (int) $row['quantity'] - (int) ($row['reserved_qty'] ?? 0)));

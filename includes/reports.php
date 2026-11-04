@@ -103,7 +103,8 @@ function orders_history(
     int $userId = 0,
     string $status = '',
     string $source = '',
-    int $limit = 200
+    int $limit = 200,
+    string $q = ''
 ): array {
     $sql = 'SELECT o.id, o.created_at, o.source, o.status, o.total, o.discount_total, o.pickup_by,
                    b.name AS branch_name, u.name AS customer_name, u.email AS customer_email
@@ -134,6 +135,16 @@ function orders_history(
         $types .= 's';
         $params[] = $source;
     }
+    $q = trim($q);
+    if ($q !== '') {
+        $sql .= ' AND (CAST(o.id AS CHAR) LIKE ? OR u.name LIKE ? OR u.email LIKE ? OR b.name LIKE ?)';
+        $types .= 'ssss';
+        $like = '%' . $q . '%';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
 
     $limit = max(1, min(500, $limit));
     $sql .= ' ORDER BY o.created_at DESC, o.id DESC LIMIT ' . $limit;
@@ -158,7 +169,7 @@ function sales_rows(mysqli $db, string $from, string $to, int $branchId = 0): ar
     return db_all($db, $sql, $types, $params);
 }
 
-function inventory_rows(mysqli $db, int $branchId = 0): array
+function inventory_rows(mysqli $db, int $branchId = 0, string $q = '', bool $lowOnly = false): array
 {
     $sql = 'SELECT b.id AS branch_id, p.id AS product_id, b.name AS branch_name, p.name AS product_name, p.sku,
                    s.quantity, s.reserved_qty,
@@ -166,13 +177,26 @@ function inventory_rows(mysqli $db, int $branchId = 0): array
                    s.reorder_level
             FROM branch_stock s
             INNER JOIN branches b ON b.id = s.branch_id
-            INNER JOIN products p ON p.id = s.product_id';
+            INNER JOIN products p ON p.id = s.product_id
+            WHERE 1 = 1';
     $types = '';
     $params = [];
     if ($branchId > 0) {
-        $sql .= ' WHERE s.branch_id = ?';
-        $types = 'i';
-        $params = [$branchId];
+        $sql .= ' AND s.branch_id = ?';
+        $types .= 'i';
+        $params[] = $branchId;
+    }
+    $q = trim($q);
+    if ($q !== '') {
+        $sql .= ' AND (p.name LIKE ? OR p.sku LIKE ? OR b.name LIKE ?)';
+        $types .= 'sss';
+        $like = '%' . $q . '%';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
+    if ($lowOnly) {
+        $sql .= ' AND GREATEST(0, CAST(s.quantity AS SIGNED) - CAST(s.reserved_qty AS SIGNED)) <= s.reorder_level';
     }
     $sql .= ' ORDER BY b.name, p.name';
     return db_all($db, $sql, $types, $params);

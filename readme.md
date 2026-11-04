@@ -63,6 +63,13 @@ Password for every seeded account: **`password`**
 | Staff (Branch C) | `staff_c@pharmacy.local` | Counter — Branch C only |
 | Admin | `admin@pharmacy.local` | Dashboard (all branches) |
 
+## Extra functional features
+
+- Customer order detail shows rejection / expiry / payment notes and can **cancel** an uncollected online order (releases reserved stock).
+- Printable **receipt** for customers, staff, and admin (`…/receipt.php?id=`).
+- Staff **My account** page to change their own password.
+- Low-stock alert banners on staff/admin home, with stock filters (`?low=1`) and product/order search.
+
 ## Database setup
 
 Import **only** `sql/schema.sql` in phpMyAdmin. It creates every table (including payment, notifications, and activity logs) and loads the demo data. Re-importing rebuilds the database, so it does not raise “Duplicate column”.

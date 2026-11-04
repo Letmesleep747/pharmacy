@@ -386,9 +386,14 @@ input[type="checkbox"] {
   .admin-side { position: static; }
 }
 
+.receipt-sheet { max-width: 760px; }
+.receipt-head { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+.receipt-meta { text-align: right; font-size: 14px; }
+
 @media print {
-  .site-header, .site-footer, .nav-toggle, .filters, .admin-side, .btn, .flash { display: none !important; }
+  .site-header, .site-footer, .nav-toggle, .filters, .admin-side, .btn, .flash, .no-print { display: none !important; }
   .layout-admin { display: block; }
   body { background: #fff; }
   table { box-shadow: none; }
+  .receipt-sheet { box-shadow: none; border: 0; }
 }

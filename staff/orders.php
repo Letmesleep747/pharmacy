@@ -11,7 +11,8 @@ $branchName = user_branch_name() ?: ('Branch #' . $branchId);
 [$from, $to] = report_dates();
 $status = trim((string) ($_GET['status'] ?? 'all'));
 $source = trim((string) ($_GET['source'] ?? 'all'));
-$allowedStatus = ['all', 'pending_approval', 'ready_for_pickup', 'approved', 'completed', 'rejected', 'expired'];
+$q = trim((string) ($_GET['q'] ?? ''));
+$allowedStatus = ['all', 'pending_approval', 'ready_for_pickup', 'approved', 'completed', 'rejected', 'cancelled', 'expired'];
 if (!in_array($status, $allowedStatus, true)) {
     $status = 'all';
 }
@@ -26,7 +27,9 @@ $orders = orders_history(
     $branchId,
     0,
     $status === 'all' ? '' : $status,
-    $source === 'all' ? '' : $source
+    $source === 'all' ? '' : $source,
+    200,
+    $q
 );
 
 $title = 'Order history';
@@ -56,6 +59,9 @@ require dirname(__DIR__) . '/includes/header.php';
           <option value="online" <?= $source === 'online' ? 'selected' : '' ?>>Online</option>
           <option value="instore" <?= $source === 'instore' ? 'selected' : '' ?>>In-store</option>
         </select>
+      </label>
+      <label>Search
+        <input type="search" name="q" value="<?= e($q) ?>" placeholder="Order # or customer">
       </label>
       <button class="btn" type="submit">Apply</button>
       <a class="btn btn-secondary" href="<?= e(url('staff/orders.php')) ?>">Reset</a>

@@ -135,7 +135,7 @@ CREATE TABLE orders (
   discount_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   total DECIMAL(10,2) NOT NULL,
   -- pending_approval → ready_for_pickup (after Rx) → completed at collection, or expired
-  status ENUM('pending_approval', 'approved', 'rejected', 'ready_for_pickup', 'completed', 'expired') NOT NULL DEFAULT 'completed',
+  status ENUM('pending_approval', 'approved', 'rejected', 'cancelled', 'ready_for_pickup', 'completed', 'expired') NOT NULL DEFAULT 'completed',
   pickup_by DATETIME NULL,
   prescription_path VARCHAR(255) NULL,
   reviewed_by INT UNSIGNED NULL,

@@ -61,7 +61,7 @@ if (is_post()) {
                 ]);
                 pos_clear();
                 flash_set('success', 'In-store sale recorded as order #' . $orderId . '.');
-                redirect('staff/order.php?id=' . $orderId);
+                redirect('staff/receipt.php?id=' . $orderId);
             } catch (Throwable $e) {
                 $error = $e->getMessage();
             }

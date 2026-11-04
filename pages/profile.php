@@ -52,6 +52,10 @@ if (is_post()) {
                 [$newHash, $userId]
             );
             $stmt->close();
+            log_activity($db, 'password_changed', 'Customer changed their own password', [
+                'entity_type' => 'user',
+                'entity_id' => $userId,
+            ]);
 
             $success = 'Your password has been changed successfully.';
             $user = db_one(

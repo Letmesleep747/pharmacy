@@ -9,6 +9,7 @@
   <a class="<?= nav_active('staff/pickups') ?>" href="<?= e(url('staff/pickups.php')) ?>">Pickups</a>
   <a class="<?= nav_active('staff/orders') ?>" href="<?= e(url('staff/orders.php')) ?>">Order history</a>
   <a class="<?= nav_active('staff/stock') ?>" href="<?= e(url('staff/stock.php')) ?>">Branch stock</a>
+  <a class="<?= nav_active('staff/profile') ?>" href="<?= e(url('staff/profile.php')) ?>">My account</a>
   <a class="<?= nav_active('staff/notifications') ?>" href="<?= e(url('staff/notifications.php')) ?>">Notifications<?php
     try {
       $n = unread_notification_count(db());
