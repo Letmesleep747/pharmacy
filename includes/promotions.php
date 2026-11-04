@@ -27,7 +27,11 @@ function promotion_discount_amount(array $promo, float $unitPrice, int $qty = 1)
     return round($amount, 2);
 }
 
-/** Pick the currently active promotion that saves the customer the most money. */
+/**
+ * Pick the currently active promotion that saves the customer the most money.
+ * If a product is linked to several overlapping promotions, discounts are NOT stacked —
+ * only this single best offer is applied at cart, checkout, and POS.
+ */
 function best_promotion_for_product(mysqli $db, int $productId): ?array
 {
     $rows = db_all(

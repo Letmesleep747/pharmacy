@@ -76,6 +76,7 @@ require dirname(__DIR__) . '/includes/header.php';
           </table>
         </div>
         <p><strong>Subtotal</strong> <?= e(money($subtotal)) ?> · <strong>Discounts</strong> <?= e(money($discountTotal)) ?> · <strong>Total</strong> <?= e(money($subtotal - $discountTotal)) ?></p>
+        <p class="muted">Only one promotion is applied per product (the best active offer). Overlapping promotions are not stacked.</p>
         <button class="btn btn-secondary" type="submit">Update cart</button>
         <button class="btn btn-danger" type="submit" name="action" value="clear">Clear</button>
         <a class="btn" href="<?= e(url('pages/checkout.php')) ?>">Checkout</a>

@@ -169,6 +169,20 @@ if (is_post()) {
         );
         if (!$branch) {
             $error = 'Please choose a valid pickup branch.';
+        } else {
+            $branchCheck = cart_branch_availability($db, cart());
+            foreach ($branchCheck as $row) {
+                if ((int) $row['id'] === (int) $branch['id'] && !$row['can_fulfil']) {
+                    $short = [];
+                    foreach ($row['items'] as $item) {
+                        if (!$item['ok']) {
+                            $short[] = $item['name'] . ' (need ' . $item['needed'] . ', available ' . $item['available'] . ')';
+                        }
+                    }
+                    $error = 'That branch does not have enough stock for your cart: ' . implode('; ', $short);
+                    break;
+                }
+            }
         }
     }
 
@@ -294,8 +308,13 @@ if ($step === 'receipt') {
     }
 }
 
-$branches    = all_branches($db);
-$cartSummary = cart_summary($db, cart());
+$branches         = all_branches($db);
+$cartSummary      = cart_summary($db, cart());
+$branchAvailability = cart_branch_availability($db, cart());
+$branchAvailabilityById = [];
+foreach ($branchAvailability as $row) {
+    $branchAvailabilityById[(int) $row['id']] = $row;
+}
 
 $title = $step === 'receipt'
     ? 'Payment Receipt'
@@ -505,12 +524,51 @@ require dirname(__DIR__) . '/includes/header.php';
                         <label for="branch_id">Pickup Branch</label>
                         <select name="branch_id" id="branch_id" <?= ($needsRx && $rxMethod === 'walkin') ? '' : 'required' ?>>
                             <option value="">Choose a branch</option>
-                            <?php foreach ($branches as $branch): ?>
-                                <option value="<?= (int) $branch['id'] ?>" <?= $selectedBranchId === (int) $branch['id'] ? 'selected' : '' ?>>
-                                    <?= e($branch['name']) ?> — <?= e($branch['address']) ?>
+                            <?php foreach ($branchAvailability as $branch): ?>
+                                <option
+                                    value="<?= (int) $branch['id'] ?>"
+                                    <?= $selectedBranchId === (int) $branch['id'] ? 'selected' : '' ?>
+                                    <?= $branch['can_fulfil'] ? '' : 'disabled' ?>
+                                >
+                                    <?= e($branch['name']) ?>
+                                    — <?= $branch['can_fulfil'] ? 'in stock for your cart' : 'not enough stock' ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <p class="payment-note">Only branches with enough available stock for every item in your cart can be selected. Available = on hand − reserved.</p>
+
+                        <div id="branch-stock-panel" class="payment-section" style="margin-top:14px">
+                            <h3 style="margin:0 0 8px;font-size:1rem">Stock at each branch</h3>
+                            <ul class="availability" id="branch-stock-list">
+                                <?php foreach ($branchAvailability as $branch): ?>
+                                  <li data-branch-id="<?= (int) $branch['id'] ?>">
+                                    <div>
+                                      <strong><?= e($branch['name']) ?></strong>
+                                      <div class="muted"><?= e($branch['address']) ?></div>
+                                      <ul class="muted" style="margin:6px 0 0;padding-left:1.1rem">
+                                        <?php foreach ($branch['items'] as $item): ?>
+                                          <li>
+                                            <?= e($item['name']) ?>:
+                                            need <?= (int) $item['needed'] ?>,
+                                            available <?= (int) $item['available'] ?>
+                                            <?php if (!$item['ok']): ?>
+                                              <span class="badge badge-danger">Short</span>
+                                            <?php endif; ?>
+                                          </li>
+                                        <?php endforeach; ?>
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <?php if ($branch['can_fulfil']): ?>
+                                        <span class="badge badge-ok">Can fulfil cart</span>
+                                      <?php else: ?>
+                                        <span class="badge badge-danger">Not enough stock</span>
+                                      <?php endif; ?>
+                                    </div>
+                                  </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
 
                         <?php if ($needsRx): ?>
                         <div id="rx-upload-panel" class="payment-section" style="margin-top: 18px;">
@@ -689,6 +747,20 @@ require dirname(__DIR__) . '/includes/header.php';
     if (rxOnline) rxOnline.addEventListener('change', syncRxMethod);
     if (rxWalkin) rxWalkin.addEventListener('change', syncRxMethod);
     syncRxMethod();
+
+    function highlightBranchStock() {
+        if (!branchSelect) return;
+        const selected = branchSelect.value;
+        document.querySelectorAll('#branch-stock-list > li').forEach((li) => {
+            const match = selected !== '' && li.getAttribute('data-branch-id') === selected;
+            li.style.outline = match ? '2px solid var(--teal-500, #0f766e)' : '';
+            li.style.background = match ? '#f0fdfa' : '';
+        });
+    }
+    if (branchSelect) {
+        branchSelect.addEventListener('change', highlightBranchStock);
+        highlightBranchStock();
+    }
 })();
 
 const methodSelect = document.getElementById('payment_method');

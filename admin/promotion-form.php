@@ -135,6 +135,7 @@ require dirname(__DIR__) . '/includes/header.php';
       <label>Start date <input type="date" name="start_date" required value="<?= e($startDate) ?>"></label>
       <label>End date <input type="date" name="end_date" required value="<?= e($endDate) ?>"></label>
       <label class="check"><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Active (customers only see it during the date range)</label>
+      <p class="muted">If a product is already in another active promotion, discounts do not stack — checkout and POS always apply only the single best offer for that product.</p>
       <fieldset>
         <legend>Applicable products</legend>
         <div class="check-grid">
