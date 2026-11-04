@@ -4,18 +4,25 @@
  * Works even when the DB is missing the uq_notification_event unique key,
  * so repeated syncs / polls can never create duplicate rows.
  */
-function notification_insert_once(mysqli $db, int $userId, int $orderId, string $type, string $title, string $message): void
-{
-    db_exec(
+function notification_insert_once(
+    mysqli $db,
+    int $userId,
+    int $orderId,
+    string $type,
+    string $title,
+    string $message
+): void {
+
+    $stmt = db_exec(
         $db,
-        'INSERT INTO notifications (user_id, order_id, type, title, message)
-         SELECT ?, ?, ?, ?, ? FROM DUAL
-         WHERE NOT EXISTS (
-             SELECT 1 FROM notifications WHERE user_id = ? AND order_id = ? AND type = ?
-         )',
-        'iisssiis',
-        [$userId, $orderId, $type, $title, $message, $userId, $orderId, $type]
-    )->close();
+        'INSERT IGNORE INTO notifications
+         (user_id, order_id, type, title, message)
+         VALUES (?, ?, ?, ?, ?)',
+        'iisss',
+        [$userId, $orderId, $type, $title, $message]
+    );
+
+    $stmt->close();
 }
 
 /** Unread notification count for the signed-in (or given) user. */
