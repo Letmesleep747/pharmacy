@@ -83,39 +83,56 @@ require dirname(__DIR__) . '/includes/header.php';
       <p class="flash flash-success"><?= e($success) ?></p>
     <?php endif; ?>
 
-    <div class="grid">
-      <article class="card">
+    <style>
+      .profile-layout { max-width: 1050px; }
+      .profile-details { width: 100%; box-sizing: border-box; margin-bottom: 20px; padding: 30px; }
+      .profile-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; margin: 24px 0; }
+      .profile-info p { margin: 8px 0 0; overflow-wrap: anywhere; }
+      .profile-password { width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 0; overflow: hidden; }
+      .profile-password summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 24px 30px; font-weight: 700; font-size: 1.3rem; }
+      .profile-password summary::-webkit-details-marker { display: none; }
+      .profile-password summary::after { content: '+'; font-size: 1.5rem; }
+      .profile-password[open] summary::after { content: '−'; }
+      .profile-password .password-content { padding: 0 30px 30px; }
+      .profile-password .form { max-width: 540px; }
+      @media (max-width: 600px) { .profile-details { padding: 22px; } .profile-password summary { padding: 20px 22px; } .profile-password .password-content { padding: 0 22px 22px; } }
+    </style>
+
+    <div class="profile-layout">
+      <article class="card profile-details">
         <h2>Account details</h2>
-        <p><strong>Name</strong></p>
-        <p><?= e($user['name']) ?></p>
-
-        <p><strong>Email address</strong></p>
-        <p><?= e($user['email']) ?></p>
-
+        <div class="profile-info">
+          <div>
+            <strong>Name</strong>
+            <p><?= e($user['name']) ?></p>
+          </div>
+          <div>
+            <strong>Email address</strong>
+            <p><?= e($user['email']) ?></p>
+          </div>
+        </div>
         <p class="muted">If your name or email needs to be changed, please contact the pharmacy.</p>
       </article>
 
-      <article class="card">
-        <h2>Change password</h2>
-        <form class="form" method="post" action="">
-          <?= csrf_field() ?>
-
-          <label>Current password
-            <input type="password" name="current_password" required autocomplete="current-password">
-          </label>
-
-          <label>New password
-            <input type="password" name="new_password" required minlength="8" autocomplete="new-password">
-          </label>
-
-          <label>Confirm new password
-            <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
-          </label>
-
-          <p class="muted">Use at least 8 characters. Your current password is required to make this change.</p>
-          <button class="btn" type="submit">Change password</button>
-        </form>
-      </article>
+      <details class="card profile-password" <?= $error !== '' ? 'open' : '' ?>>
+        <summary>Change password</summary>
+        <div class="password-content">
+          <form class="form" method="post" action="">
+            <?= csrf_field() ?>
+            <label>Current password
+              <input type="password" name="current_password" required autocomplete="current-password">
+            </label>
+            <label>New password
+              <input type="password" name="new_password" required minlength="8" autocomplete="new-password">
+            </label>
+            <label>Confirm new password
+              <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
+            </label>
+            <p class="muted">Use at least 8 characters. Your current password is required to make this change.</p>
+            <button class="btn" type="submit">Update password</button>
+          </form>
+        </div>
+      </details>
     </div>
 
     <p><a class="btn btn-secondary" href="<?= e(url('index.php')) ?>">Back to home</a></p>
