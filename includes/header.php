@@ -77,7 +77,7 @@ $notifBadge = static function (int $count): string {
           <a class="<?= nav_active('pages/products') ?>" href="<?= e(url('pages/products.php')) ?>">Medications</a>
           <a class="<?= nav_active('pages/promotions') ?>" href="<?= e(url('pages/promotions.php')) ?>">Promotions</a>
           <a class="<?= nav_active('pages/branches') ?>" href="<?= e(url('pages/branches.php')) ?>">Branches</a>
-          <a class="<?= nav_active('pages/cart') ?>" href="<?= e(url('pages/cart.php')) ?>">Cart (<?= (int) cart_count() ?>)</a>
+          <a class="<?= nav_active('pages/cart') ?>" id="nav-cart-link" href="<?= e(url('pages/cart.php')) ?>">Cart (<span data-cart-count><?= (int) cart_count() ?></span>)</a>
           <?php if ($user): ?>
             <a class="<?= nav_active('pages/orders') ?>" href="<?= e(url('pages/orders.php')) ?>">Orders</a>
             <a class="<?= nav_active('pages/notifications') ?>" href="<?= e($notifHref) ?>">Notifications<?= $notifBadge($notifUnread) ?></a>
