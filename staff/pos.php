@@ -150,7 +150,7 @@ require dirname(__DIR__) . '/includes/header.php';
         </div>
         <p><strong>Total <?= e(money($subtotal - $discountTotal)) ?></strong> (discounts <?= e(money($discountTotal)) ?>)</p>
         <?php if ($needsRx): ?>
-          <label style="display:block;margin:12px 0">
+          <label class="check" style="margin:12px 0">
             <input type="checkbox" name="rx_verified" value="1" required>
             Prescription verified in person for all Rx items
           </label>

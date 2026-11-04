@@ -119,7 +119,7 @@ require dirname(__DIR__) . '/includes/header.php';
       <label>Discount value <input type="number" step="0.01" min="0.01" name="discount_value" required value="<?= e((string) $discountValue) ?>"></label>
       <label>Start date <input type="date" name="start_date" required value="<?= e($startDate) ?>"></label>
       <label>End date <input type="date" name="end_date" required value="<?= e($endDate) ?>"></label>
-      <label><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Active (customers only see it during the date range)</label>
+      <label class="check"><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Active (customers only see it during the date range)</label>
       <fieldset>
         <legend>Applicable products</legend>
         <div class="check-grid">

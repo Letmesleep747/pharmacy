@@ -73,7 +73,7 @@ require dirname(__DIR__) . '/includes/header.php';
       <label>Address <input type="text" name="address" required value="<?= e($address) ?>"></label>
       <label>Phone <input type="text" name="phone" required value="<?= e($phone) ?>"></label>
       <label>Opening hours <input type="text" name="opening_hours" required value="<?= e($hours) ?>"></label>
-      <label><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Active</label>
+      <label class="check"><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Active</label>
       <button class="btn" type="submit">Save branch</button>
       <?php if ($edit): ?><a class="btn btn-secondary" href="<?= e(url('admin/branches.php')) ?>">Cancel</a><?php endif; ?>
     </form>

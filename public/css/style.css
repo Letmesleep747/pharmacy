@@ -329,8 +329,31 @@ th { background: var(--teal-100); font-size: 12px; text-transform: uppercase; le
 .form { display: grid; gap: 12px; max-width: 520px; }
 .form-wide { max-width: 720px; }
 .form label { font-weight: 600; font-size: 14px; display: grid; gap: 6px; }
-.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
-.check-grid label { font-weight: 500; display: flex; gap: 8px; align-items: start; }
+/* Checkbox rows: keep box and text on one line, same size and spacing everywhere */
+.form label.check,
+.form label:has(> input[type="checkbox"]),
+.check-grid label,
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  line-height: 1.35;
+}
+input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--teal-700);
+  vertical-align: middle;
+}
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
 
 .availability { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .availability li {

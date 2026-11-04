@@ -102,8 +102,8 @@ require dirname(__DIR__) . '/includes/header.php';
       </label>
       <label>Description <textarea name="description" rows="4" required><?= e($description) ?></textarea></label>
       <label>Unit price (RM) <input type="number" step="0.01" min="0" name="unit_price" required value="<?= e((string) $unitPrice) ?>"></label>
-      <label><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Visible to customers</label>
-      <label><input type="checkbox" name="requires_prescription" <?= $requiresRx ? 'checked' : '' ?>> Requires prescription (online orders need staff approval)</label>
+      <label class="check"><input type="checkbox" name="is_active" <?= $isActive ? 'checked' : '' ?>> Visible to customers</label>
+      <label class="check"><input type="checkbox" name="requires_prescription" <?= $requiresRx ? 'checked' : '' ?>> Requires prescription (online orders need staff approval)</label>
       <button class="btn" type="submit">Save</button>
     </form>
   </div>
