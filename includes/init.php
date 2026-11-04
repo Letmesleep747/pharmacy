@@ -35,5 +35,5 @@ csrf_verify();
 try {
     expire_overdue_orders(db());
 } catch (Throwable $e) {
-    // Schema may not include pickup_by / reserved_qty until migrate_reservation.sql is run.
+    // Ignore when an older database is missing reservation columns.
 }

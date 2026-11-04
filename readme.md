@@ -65,19 +65,7 @@ Password for every seeded account: **`password`**
 
 ## Database setup
 
-**Fresh install** — import in order:
-
-1. `sql/schema.sql`
-2. `sql/seed.sql`
-
-**Existing database** — run in order (skip statements that error if already applied):
-
-1. `sql/migrate_prescription.sql` (adds `requires_prescription`, `status`, `prescription_path`, etc.)
-2. `sql/migrate_reservation.sql` (adds `reserved_qty`, `pickup_by`, and widens the `status` enum)
-3. `sql/payment_method_migration.sql` (adds `payment_method` column to orders)
-4. `sql/migrate_staff_branch.sql` (adds `users.branch_id` and Branch B/C staff accounts)
-5. `sql/payment_receipt_review_migration.sql` (payment receipt columns + notification types)
-6. `sql/migrate_payment_notification_types.sql` (if payment notification types are missing)
+Import **only** `sql/schema.sql` in phpMyAdmin. It creates every table (including payment and notifications) and loads the demo data. Re-importing rebuilds the database, so it does not raise “Duplicate column”.
 
 ## Apache notes
 

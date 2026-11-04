@@ -18,7 +18,7 @@ function db(): mysqli
         $mysqli->set_charset(DB_CHARSET);
     } catch (mysqli_sql_exception $e) {
         http_response_code(500);
-        echo 'Database connection failed. Import sql/schema.sql and sql/seed.sql, then check config/config.php.';
+        echo 'Database connection failed. Import sql/schema.sql, then check config/config.php.';
         exit;
     }
 
