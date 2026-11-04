@@ -16,6 +16,49 @@
   var lastSeenId = parseInt(localStorage.getItem(storageKey) || '0', 10) || 0;
   var pollMs = 8000;
   var busy = false;
+  var shownKey = 'pharmacy_notif_shown_' + (apiUrl || '');
+  var freshSeconds = 90; // a notification this new (and never shown) still gets one toast on page load
+
+  function loadShown() {
+    try {
+      var arr = JSON.parse(localStorage.getItem(shownKey) || '[]');
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Unique per notification AND per order event, so duplicate DB rows never toast twice.
+  function keyFor(item) {
+    return 'id:' + item.id;
+  }
+  function eventKeyFor(item) {
+    return 'ev:' + (item.order_id || 0) + ':' + (item.type || '');
+  }
+
+  function alreadyShown(item) {
+    var shown = loadShown();
+    return shown.indexOf(keyFor(item)) !== -1 || shown.indexOf(eventKeyFor(item)) !== -1;
+  }
+
+  function rememberShown(item) {
+    var shown = loadShown();
+    shown.push(keyFor(item), eventKeyFor(item));
+    if (shown.length > 200) shown = shown.slice(shown.length - 200);
+    try { localStorage.setItem(shownKey, JSON.stringify(shown)); } catch (e) {}
+  }
+
+  function syncLastSeenFromStorage() {
+    var stored = parseInt(localStorage.getItem(storageKey) || '0', 10) || 0;
+    if (stored > lastSeenId) lastSeenId = stored;
+  }
+
+  function bumpLastSeen(id) {
+    if (id > lastSeenId) {
+      lastSeenId = id;
+      try { localStorage.setItem(storageKey, String(lastSeenId)); } catch (e) {}
+    }
+  }
 
   function toastRoot() {
     var root = document.getElementById('notif-toast-root');
@@ -81,6 +124,8 @@
   }
 
   function showToast(item) {
+    if (alreadyShown(item)) return; // each notification pops up only once, ever
+    rememberShown(item);
     var root = toastRoot();
     var el = document.createElement('div');
     el.className = 'notif-toast';
@@ -141,21 +186,27 @@
       .catch(function () { return null; });
   }
 
-  function seedFromItems(items) {
-    var maxId = lastSeenId;
-    (items || []).forEach(function (item) {
-      if (item && item.id > maxId) maxId = item.id;
+  // Page load: show ONE toast for brand-new, never-shown notifications (e.g. right after checkout);
+  // everything older is just used as the baseline so old unread items do not pop up.
+  function seedFromResponse(data) {
+    var items = Array.isArray(data.items) ? data.items.slice() : [];
+    items.sort(function (a, b) { return a.id - b.id; });
+    items.forEach(function (item) {
+      var fresh = (item.age_seconds || 0) <= freshSeconds;
+      if (fresh && item.id > lastSeenId && !alreadyShown(item)) {
+        showToast(item);
+      } else if (!alreadyShown(item)) {
+        rememberShown(item); // old unread: treat as already seen
+      }
     });
-    if (maxId > lastSeenId) {
-      lastSeenId = maxId;
-      localStorage.setItem(storageKey, String(lastSeenId));
-    }
+    var maxId = parseInt(data.latest_id || '0', 10) || 0;
+    items.forEach(function (item) { if (item.id > maxId) maxId = item.id; });
+    bumpLastSeen(maxId);
   }
 
-  function poll(forceToast) {
+  function poll() {
     if (busy || document.hidden) return;
-    // Never toast until we know a baseline — otherwise after_id=0 dumps all unread as popups.
-    if (!forceToast && lastSeenId <= 0) return;
+    syncLastSeenFromStorage(); // another tab may already have shown newer toasts
     busy = true;
     var url = apiUrl + (apiUrl.indexOf('?') >= 0 ? '&' : '?') + 'after_id=' + encodeURIComponent(String(lastSeenId));
     fetch(url, {
@@ -172,19 +223,17 @@
         items.sort(function (a, b) { return a.id - b.id; });
         items.forEach(function (item) {
           if (item.id > lastSeenId) {
-            showToast(item);
-            lastSeenId = item.id;
+            showToast(item); // no-op if this notification/event was already shown
           }
+          bumpLastSeen(item.id);
         });
-        if (lastSeenId > 0) {
-          localStorage.setItem(storageKey, String(lastSeenId));
-        }
+        bumpLastSeen(parseInt(data.latest_id || '0', 10) || 0);
       })
       .catch(function () { /* ignore transient errors */ })
       .finally(function () { busy = false; });
   }
 
-  // First paint: badge only + seed lastSeen so existing unread do not all pop at once.
+  // First paint: badge + baseline (and one toast for anything brand new and never shown).
   fetch(apiUrl, {
     method: 'GET',
     credentials: 'same-origin',
@@ -194,13 +243,13 @@
     .then(function (data) {
       if (!data || !data.ok) return;
       updateBadges(data.unread || 0);
-      seedFromItems(data.items);
+      seedFromResponse(data);
     })
     .catch(function () {})
     .finally(function () {
-      setInterval(function () { poll(false); }, pollMs);
+      setInterval(poll, pollMs);
       document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) poll(false);
+        if (!document.hidden) poll();
       });
     });
 })();

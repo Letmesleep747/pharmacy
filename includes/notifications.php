@@ -1,4 +1,23 @@
 <?php
+/**
+ * Insert a notification only if the same (user, order, type) does not exist yet.
+ * Works even when the DB is missing the uq_notification_event unique key,
+ * so repeated syncs / polls can never create duplicate rows.
+ */
+function notification_insert_once(mysqli $db, int $userId, int $orderId, string $type, string $title, string $message): void
+{
+    db_exec(
+        $db,
+        'INSERT INTO notifications (user_id, order_id, type, title, message)
+         SELECT ?, ?, ?, ?, ? FROM DUAL
+         WHERE NOT EXISTS (
+             SELECT 1 FROM notifications WHERE user_id = ? AND order_id = ? AND type = ?
+         )',
+        'iisssiis',
+        [$userId, $orderId, $type, $title, $message, $userId, $orderId, $type]
+    )->close();
+}
+
 /** Unread notification count for the signed-in (or given) user. */
 function unread_notification_count(mysqli $db, ?int $userId = null): int
 {
@@ -15,6 +34,13 @@ function unread_notification_count(mysqli $db, ?int $userId = null): int
     return (int) ($row['n'] ?? 0);
 }
 
+/** Highest notification id for the user (read or unread) — used as the toast baseline. */
+function latest_notification_id(mysqli $db, int $userId): int
+{
+    $row = db_one($db, 'SELECT MAX(id) AS m FROM notifications WHERE user_id = ?', 'i', [$userId]);
+    return (int) ($row['m'] ?? 0);
+}
+
 /** Recent unread rows for badges / live toast (newest first). */
 function recent_unread_notifications(mysqli $db, int $userId, int $limit = 8, int $afterId = 0): array
 {
@@ -22,7 +48,8 @@ function recent_unread_notifications(mysqli $db, int $userId, int $limit = 8, in
         return [];
     }
     $limit = max(1, min(20, $limit));
-    $sql = 'SELECT id, order_id, type, title, message, created_at
+    $sql = 'SELECT id, order_id, type, title, message, created_at,
+                   TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds
             FROM notifications
             WHERE user_id = ? AND is_read = 0';
     $types = 'i';
@@ -42,7 +69,7 @@ function notify_prescription_submitted(mysqli $db, int $orderId): void {
     if (!$order || $order['status'] !== 'pending_approval') return;
     $users = db_all($db, "SELECT id FROM users WHERE role = 'admin' OR (role = 'staff' AND branch_id = ?)", 'i', [(int)$order['branch_id']]);
     foreach ($users as $user) {
-        db_exec($db, 'INSERT IGNORE INTO notifications (user_id,order_id,type,title,message) VALUES (?, ?, ?, ?, ?)', 'iisss', [(int)$user['id'],$orderId,'prescription_submitted','Prescription awaiting approval',"Order #$orderId has a prescription to review."])->close();
+        notification_insert_once($db, (int)$user['id'],$orderId,'prescription_submitted','Prescription awaiting approval',"Order #$orderId has a prescription to review.");
     }
 }
 function notify_prescription_reviewed(mysqli $db, int $orderId): void {
@@ -54,13 +81,13 @@ function notify_prescription_reviewed(mysqli $db, int $orderId): void {
     $title = $approved ? 'Prescription approved' : 'Prescription not approved';
     $message = $approved ? "Order #$orderId was approved. Check your order for pickup details." : "Order #$orderId was rejected. If payment was captured, your refund is pending processing.";
     if (!$approved && trim((string)$order['review_note']) !== '') $message .= ' Reason: ' . $order['review_note'];
-    db_exec($db, 'INSERT IGNORE INTO notifications (user_id,order_id,type,title,message) VALUES (?, ?, ?, ?, ?)', 'iisss', [(int)$order['user_id'],$orderId,$type,$title,$message])->close();
+    notification_insert_once($db, (int)$order['user_id'],$orderId,$type,$title,$message);
 }
 /** Invoke only after the payment processor confirms a successful refund. */
 function notify_refund_completed(mysqli $db, int $orderId): void {
     $order = db_one($db, 'SELECT user_id FROM orders WHERE id = ?', 'i', [$orderId]);
     if (!$order || !$order['user_id']) return;
-    db_exec($db, 'INSERT IGNORE INTO notifications (user_id,order_id,type,title,message) VALUES (?, ?, ?, ?, ?)', 'iisss', [(int)$order['user_id'],$orderId,'refund_completed','Refund completed',"The refund for order #$orderId has been confirmed. Your bank may take additional time to show the funds."])->close();
+    notification_insert_once($db, (int)$order['user_id'],$orderId,'refund_completed','Refund completed',"The refund for order #$orderId has been confirmed. Your bank may take additional time to show the funds.");
 }
 
 /** Synchronize existing order statuses into notifications, without approval functions. */
@@ -75,8 +102,7 @@ function sync_prescription_notifications(mysqli $db, array $user): void {
             $params[] = (int) $user['branch_id'];
         }
         foreach (db_all($db, $sql, $types, $params) as $order) {
-            db_exec($db, 'INSERT IGNORE INTO notifications (user_id,order_id,type,title,message) VALUES (?,?,?,?,?)', 'iisss',
-                [$userId,(int)$order['id'],'prescription_submitted','Prescription awaiting approval','Order #' . $order['id'] . ' has a prescription awaiting review.'])->close();
+            notification_insert_once($db, $userId,(int)$order['id'],'prescription_submitted','Prescription awaiting approval','Order #' . $order['id'] . ' has a prescription awaiting review.');
         }
     } elseif ($role === 'customer') {
         $milestones = db_all($db, "SELECT id FROM orders WHERE user_id = ? AND source = 'online' AND status IN ('ready_for_pickup','completed')", 'i', [$userId]);
@@ -89,8 +115,7 @@ function sync_prescription_notifications(mysqli $db, array $user): void {
             $title = $approved ? 'Prescription approved' : 'Prescription not approved';
             $message = $approved ? 'Order #' . $order['id'] . ' was approved. Check your order for pickup details.' : 'Order #' . $order['id'] . ' was rejected. If payment was collected, contact the pharmacy about refund processing.';
             if (!$approved && trim((string)$order['review_note']) !== '') $message .= ' Reason: ' . $order['review_note'];
-            db_exec($db, 'INSERT IGNORE INTO notifications (user_id,order_id,type,title,message) VALUES (?,?,?,?,?)', 'iisss',
-                [$userId,(int)$order['id'],$type,$title,$message])->close();
+            notification_insert_once($db, $userId,(int)$order['id'],$type,$title,$message);
         }
     }
 }
@@ -106,6 +131,5 @@ function notify_customer_order_status(mysqli $db, int $orderId): void {
     ];
     if (!isset($events[$order['status']])) return;
     [$type, $title, $message] = $events[$order['status']];
-    db_exec($db, 'INSERT IGNORE INTO notifications (user_id,order_id,type,title,message) VALUES (?,?,?,?,?)', 'iisss',
-        [(int)$order['user_id'], $orderId, $type, $title, $message])->close();
+    notification_insert_once($db, (int)$order['user_id'], $orderId, $type, $title, $message);
 }

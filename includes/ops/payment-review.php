@@ -54,12 +54,7 @@ if (is_post()) {
                     ? 'Your payment receipt was approved by admin/staff. Your prescription is still awaiting branch review.'
                     : 'Your payment receipt was approved by admin/staff. Your order is being processed at ' . $order['branch_name'] . '.';
                 try {
-                    db_exec(
-                        $db,
-                        'INSERT INTO notifications (user_id, order_id, type, title, message) VALUES (?,?,?,?,?)',
-                        'iisss',
-                        [$userId, $id, 'payment_approved', 'Payment receipt approved', $msg]
-                    )->close();
+                    notification_insert_once($db, $userId, $id, 'payment_approved', 'Payment receipt approved', $msg);
                 } catch (Throwable $notifyError) {
                     // Approval still succeeds if notification ENUM is outdated.
                 }
@@ -123,18 +118,14 @@ if (is_post()) {
             $userId = (int) ($order['user_id'] ?? 0);
             if ($userId > 0) {
                 try {
-                    db_exec(
-                        $db,
-                        'INSERT INTO notifications (user_id, order_id, type, title, message) VALUES (?,?,?,?,?)',
-                        'iisss',
-                        [
-                            $userId,
-                            $id,
-                            'payment_rejected_refunded',
-                            'Payment rejected — refund processed',
-                            'Your payment receipt for order #' . $id . ' was rejected. Demo refund status: refunded. Reason: ' . $note . '. No real money is moved by this demo system.',
-                        ]
-                    )->close();
+                    notification_insert_once(
+                    $db,
+                    $userId,
+                    $id,
+                    'payment_rejected_refunded',
+                    'Payment rejected — refund processed',
+                    'Your payment receipt for order #' . $id . ' was rejected. Demo refund status: refunded. Reason: ' . $note . '. No real money is moved by this demo system.'
+                );
                 } catch (Throwable $notifyError) {
                     // Rejection still succeeds if notification ENUM is outdated.
                 }

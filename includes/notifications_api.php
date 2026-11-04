@@ -45,6 +45,7 @@ $items = recent_unread_notifications($db, $userId, $afterId > 0 ? 8 : 5, $afterI
 echo json_encode([
     'ok' => true,
     'unread' => $unread,
+    'latest_id' => latest_notification_id($db, $userId),
     'items' => array_map(static function (array $row): array {
         return [
             'id' => (int) $row['id'],
@@ -53,6 +54,7 @@ echo json_encode([
             'title' => (string) $row['title'],
             'message' => (string) $row['message'],
             'created_at' => (string) $row['created_at'],
+            'age_seconds' => (int) ($row['age_seconds'] ?? 0),
         ];
     }, $items),
     'list_url' => url(match (current_portal()) {
