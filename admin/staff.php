@@ -74,15 +74,29 @@ if (is_post()) {
                     'ssiis',
                     [$name, $email, $branchId, $saveId, 'staff']
                 )->close();
+                log_activity($db, 'staff_updated', 'Updated staff account ' . $email, [
+                    'entity_type' => 'user',
+                    'entity_id' => $saveId,
+                    'branch_id' => $branchId,
+                    'details' => ['name' => $name, 'email' => $email],
+                ]);
                 flash_set('success', 'Staff account updated. Password is unchanged (use Reset password if needed).');
             } else {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                db_exec(
+                $stmt = db_exec(
                     $db,
                     'INSERT INTO users (name, email, password_hash, role, branch_id) VALUES (?, ?, ?, ?, ?)',
                     'ssssi',
                     [$name, $email, $hash, 'staff', $branchId]
-                )->close();
+                );
+                $newStaffId = (int) $stmt->insert_id;
+                $stmt->close();
+                log_activity($db, 'staff_created', 'Created staff account ' . $email, [
+                    'entity_type' => 'user',
+                    'entity_id' => $newStaffId,
+                    'branch_id' => $branchId,
+                    'details' => ['name' => $name, 'email' => $email],
+                ]);
                 flash_set('success', 'Staff account created for the selected branch. Share the temporary password securely — it cannot be viewed again.');
             }
             redirect('admin/staff.php');
@@ -113,6 +127,11 @@ if (is_post()) {
                 'sis',
                 [$hash, $resetId, 'staff']
             )->close();
+            log_activity($db, 'staff_password_reset', 'Reset password for staff ' . $resetUser['email'], [
+                'entity_type' => 'user',
+                'entity_id' => $resetId,
+                'details' => ['email' => $resetUser['email'], 'name' => $resetUser['name']],
+            ]);
             flash_set('success', 'Password reset for ' . $resetUser['email'] . '. Share the new temporary password securely — it is not stored in plain text.');
             redirect('admin/staff.php');
         }

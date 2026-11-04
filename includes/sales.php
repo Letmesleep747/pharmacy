@@ -474,6 +474,12 @@ function approve_prescription_order(mysqli $db, int $orderId, int $reviewerId, s
         )->close();
 
         $db->commit();
+        log_activity($db, 'rx_approved', 'Approved prescription for order #' . $orderId, [
+            'entity_type' => 'order',
+            'entity_id' => $orderId,
+            'branch_id' => (int) $order['branch_id'],
+            'details' => ['note' => $note !== '' ? $note : null],
+        ]);
     } catch (Throwable $e) {
         $db->rollback();
         throw $e;
@@ -504,6 +510,12 @@ function reject_prescription_order(mysqli $db, int $orderId, int $reviewerId, st
             ['rejected', $reviewerId, $note, $orderId]
         )->close();
         $db->commit();
+        log_activity($db, 'rx_rejected', 'Rejected prescription for order #' . $orderId, [
+            'entity_type' => 'order',
+            'entity_id' => $orderId,
+            'branch_id' => (int) $order['branch_id'],
+            'details' => ['note' => $note],
+        ]);
     } catch (Throwable $e) {
         $db->rollback();
         throw $e;
@@ -549,6 +561,12 @@ function complete_pickup_order(mysqli $db, int $orderId): void
 
         db_exec($db, 'UPDATE orders SET status = ? WHERE id = ?', 'si', ['completed', $orderId])->close();
         $db->commit();
+        log_activity($db, 'pickup_collected', 'Marked order #' . $orderId . ' as collected', [
+            'entity_type' => 'order',
+            'entity_id' => $orderId,
+            'branch_id' => (int) $order['branch_id'],
+            'details' => ['items' => count($items)],
+        ]);
     } catch (Throwable $e) {
         $db->rollback();
         throw $e;

@@ -5,7 +5,16 @@ require_admin_portal();
 $db = db();
 if (is_post() && ($_POST['action'] ?? '') === 'toggle') {
     $id = post_int('id');
+    $before = db_one($db, 'SELECT name, is_active FROM products WHERE id = ?', 'i', [$id]);
     db_exec($db, 'UPDATE products SET is_active = 1 - is_active WHERE id = ?', 'i', [$id])->close();
+    if ($before) {
+        $nowActive = (int) $before['is_active'] === 1 ? 0 : 1;
+        log_activity($db, 'product_toggled', ($nowActive ? 'Showed' : 'Hid') . ' product ' . $before['name'], [
+            'entity_type' => 'product',
+            'entity_id' => $id,
+            'details' => ['is_active' => $nowActive],
+        ]);
+    }
     flash_set('success', 'Product status updated.');
     redirect('admin/products.php');
 }

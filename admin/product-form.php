@@ -55,6 +55,16 @@ if (is_post()) {
                 'isssdiii',
                 [$categoryId, $name, $sku, $description, $price, $isActive, $requiresRx, $id]
             )->close();
+            log_activity($db, 'product_updated', 'Updated product ' . $name, [
+                'entity_type' => 'product',
+                'entity_id' => $id,
+                'details' => [
+                    'sku' => $sku,
+                    'is_active' => $isActive,
+                    'requires_prescription' => $requiresRx,
+                    'unit_price' => $price,
+                ],
+            ]);
             flash_set('success', 'Product updated.');
         } else {
             $stmt = db_exec(
@@ -74,6 +84,16 @@ if (is_post()) {
                     [(int) $branch['id'], $newId]
                 )->close();
             }
+            log_activity($db, 'product_created', 'Created product ' . $name, [
+                'entity_type' => 'product',
+                'entity_id' => $newId,
+                'details' => [
+                    'sku' => $sku,
+                    'is_active' => $isActive,
+                    'requires_prescription' => $requiresRx,
+                    'unit_price' => $price,
+                ],
+            ]);
             flash_set('success', 'Product created. Set branch stock next.');
         }
         redirect('admin/products.php');

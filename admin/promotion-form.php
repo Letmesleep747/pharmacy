@@ -89,6 +89,21 @@ if (is_post()) {
                 )->close();
             }
             $db->commit();
+            log_activity(
+                $db,
+                $promo ? 'promotion_updated' : 'promotion_created',
+                ($promo ? 'Updated' : 'Created') . ' promotion ' . $name,
+                [
+                    'entity_type' => 'promotion',
+                    'entity_id' => (int) $promoId,
+                    'details' => [
+                        'discount_type' => $discountType,
+                        'discount_value' => $value,
+                        'is_active' => $isActive,
+                        'product_count' => count($selected),
+                    ],
+                ]
+            );
             flash_set('success', 'Promotion saved.');
             redirect('admin/promotions.php');
         } catch (Throwable $e) {

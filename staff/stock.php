@@ -10,6 +10,7 @@ if (is_post()) {
     $quantities = $_POST['quantity'] ?? [];
     $reorders = $_POST['reorder'] ?? [];
     if (is_array($quantities) && is_array($reorders)) {
+        $changed = 0;
         foreach ($quantities as $key => $qty) {
             $key = (string) $key;
             if (!str_contains($key, '_')) {
@@ -30,7 +31,12 @@ if (is_post()) {
                 'iiii',
                 [$b, $p, $q, $r]
             )->close();
+            $changed++;
         }
+        log_activity($db, 'stock_updated', 'Updated stock at ' . $branchName, [
+            'branch_id' => $branchId,
+            'details' => ['rows' => $changed],
+        ]);
         flash_set('success', 'Stock levels saved for ' . $branchName . '.');
         redirect('staff/stock.php');
     }

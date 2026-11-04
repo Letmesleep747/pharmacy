@@ -15,6 +15,7 @@ USE pharmacy;
 -- FLUSH PRIVILEGES;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS activity_logs;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
@@ -215,6 +216,33 @@ CREATE TABLE notifications (
   CONSTRAINT fk_notifications_order
     FOREIGN KEY (order_id) REFERENCES orders (id)
     ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE activity_logs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  actor_id INT UNSIGNED NULL,
+  actor_name VARCHAR(120) NOT NULL,
+  actor_role ENUM('staff','admin','system') NOT NULL DEFAULT 'system',
+  action VARCHAR(60) NOT NULL,
+  entity_type VARCHAR(40) NULL,
+  entity_id INT UNSIGNED NULL,
+  branch_id INT UNSIGNED NULL,
+  summary VARCHAR(255) NOT NULL,
+  details TEXT NULL,
+  ip_address VARCHAR(45) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_activity_created (created_at),
+  KEY idx_activity_actor (actor_id),
+  KEY idx_activity_action (action),
+  KEY idx_activity_entity (entity_type, entity_id),
+  KEY idx_activity_branch (branch_id),
+  CONSTRAINT fk_activity_actor
+    FOREIGN KEY (actor_id) REFERENCES users (id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_activity_branch
+    FOREIGN KEY (branch_id) REFERENCES branches (id)
+    ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Demo data. Password for every account below is: password

@@ -50,6 +50,15 @@ if (is_post()) {
         } else {
             try {
                 $orderId = complete_sale($db, $lines, $branchId, 'instore', null, true, 'completed', null);
+                log_activity($db, 'pos_sale', 'Completed POS sale as order #' . $orderId, [
+                    'entity_type' => 'order',
+                    'entity_id' => (int) $orderId,
+                    'branch_id' => $branchId,
+                    'details' => [
+                        'line_count' => count($lines),
+                        'rx_verified' => !empty($_POST['rx_verified']),
+                    ],
+                ]);
                 pos_clear();
                 flash_set('success', 'In-store sale recorded as order #' . $orderId . '.');
                 redirect('staff/order.php?id=' . $orderId);

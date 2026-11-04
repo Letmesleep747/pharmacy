@@ -183,6 +183,13 @@ function attempt_portal_login(string $expectedRole): string
     }
 
     login_user($user);
+    if ($expectedRole === 'staff' || $expectedRole === 'admin') {
+        log_activity(db(), 'login', ucfirst($expectedRole) . ' signed in', [
+            'actor' => $user,
+            'branch_id' => isset($user['branch_id']) ? (int) $user['branch_id'] : null,
+            'details' => ['email' => $user['email']],
+        ]);
+    }
     flash_set('success', 'Welcome back, ' . $user['name'] . '.');
     redirect(portal_home($expectedRole));
 }

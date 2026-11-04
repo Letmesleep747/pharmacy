@@ -65,7 +65,9 @@ Password for every seeded account: **`password`**
 
 ## Database setup
 
-Import **only** `sql/schema.sql` in phpMyAdmin. It creates every table (including payment and notifications) and loads the demo data. Re-importing rebuilds the database, so it does not raise “Duplicate column”.
+Import **only** `sql/schema.sql` in phpMyAdmin. It creates every table (including payment, notifications, and activity logs) and loads the demo data. Re-importing rebuilds the database, so it does not raise “Duplicate column”.
+
+If the database already exists and you do not want to wipe data, open Admin → **Activity log** once — the `activity_logs` table is created automatically on first use.
 
 ## Apache notes
 

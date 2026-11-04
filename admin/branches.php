@@ -31,6 +31,12 @@ if (is_post() && ($_POST['action'] ?? '') === 'save') {
                 'ssssii',
                 [$name, $address, $phone, $hours, $isActive, $editId]
             )->close();
+            log_activity($db, 'branch_updated', 'Updated branch ' . $name, [
+                'entity_type' => 'branch',
+                'entity_id' => $editId,
+                'branch_id' => $editId,
+                'details' => ['is_active' => $isActive],
+            ]);
             flash_set('success', 'Branch updated.');
         } else {
             $stmt = db_exec(
@@ -49,6 +55,12 @@ if (is_post() && ($_POST['action'] ?? '') === 'save') {
                     [$newId, (int) $product['id']]
                 )->close();
             }
+            log_activity($db, 'branch_created', 'Created branch ' . $name, [
+                'entity_type' => 'branch',
+                'entity_id' => $newId,
+                'branch_id' => $newId,
+                'details' => ['is_active' => $isActive],
+            ]);
             flash_set('success', 'Branch added. Stock rows created at quantity 0.');
         }
         redirect('admin/branches.php');

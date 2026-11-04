@@ -65,6 +65,15 @@ if (is_post()) {
                 }
             }
 
+            log_activity($db, 'payment_approved', 'Approved payment receipt for order #' . $id, [
+                'entity_type' => 'order',
+                'entity_id' => $id,
+                'branch_id' => (int) $order['branch_id'],
+                'details' => [
+                    'payment_method' => $order['payment_method'] ?? null,
+                    'note' => $note !== '' ? $note : null,
+                ],
+            ]);
             flash_set('success', 'Payment receipt approved. Customer has been notified.');
             redirect(ops_path('payment-approvals.php'));
         }
@@ -131,6 +140,15 @@ if (is_post()) {
                 }
             }
 
+            log_activity($db, 'payment_rejected', 'Rejected payment receipt for order #' . $id, [
+                'entity_type' => 'order',
+                'entity_id' => $id,
+                'branch_id' => (int) $order['branch_id'],
+                'details' => [
+                    'payment_method' => $order['payment_method'] ?? null,
+                    'note' => $note,
+                ],
+            ]);
             flash_set('info', 'Payment rejected; demo refund marked as processed and customer notified.');
             redirect(ops_path('payment-approvals.php'));
         }
